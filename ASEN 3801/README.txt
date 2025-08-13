@@ -1,0 +1,7 @@
+This folder contains the code I made for my ASEN 3801 course - Aerospace Sciences Lab 1. This course was focused on giving students exposure to the basics of control algorithms and stability analysis. This lab was taken in parallel with Vehicle Dynamics and Control (ASEN 3728) and Orbital Mechanics and Attitude Control (ASEN 3700). All code is in MATLAB. 
+
+Lab 3 was focused on controlling the attitude of a simulated satellite bus. This bus was on a spindle that simulated space conditions of very low friction. We were able to use a gyro to control the attitude of the box and model the error using actual values. 
+
+Lab 4 was focused on modeling the control systems of a quadrotor. We got to study perturbation theory and modeled the systems of equations for the dynamics of a quadrotor to be able to tell an on board controller different Euler angles to use to fly specific flight paths. I wrote 100% of the code for this project. 
+
+Lab 5 was focused on studying perturbation theory for a fixed wing aircraft. We wrote code to model the systems of equations for fixed wing aircraft and then introduced perturbations to study the aircraft's tendency towards specific dynamic modes. I wrote most of the code for this project. 

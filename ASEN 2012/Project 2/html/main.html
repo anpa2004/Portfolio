@@ -1,0 +1,405 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>main</title><meta name="generator" content="MATLAB 9.12"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2023-11-30"><meta name="DC.source" content="main.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#2">Constants and initial conditions</a></li><li><a href="#3">Integration and Thrust Calculation</a></li><li><a href="#4">Verification data</a></li><li><a href="#5">Stage calculations</a></li><li><a href="#6">Maxima of rocket states</a></li><li><a href="#7">Plots</a></li></ul></div><pre class="codeinput"><span class="comment">% Author(s): Andrew Patella</span>
+<span class="comment">% Assignment title: Project 2</span>
+<span class="comment">% Purpose: Model flight of bottle rocket using ode45</span>
+<span class="comment">% Creation date: 11/06/2023</span>
+<span class="comment">% Revisions: N/A</span>
+
+close <span class="string">all</span>; clear; clc;
+</pre><h2 id="2">Constants and initial conditions</h2><pre class="codeinput"><span class="comment">% Storing constants in a struct using the getConst() function</span>
+const = getConst();
+
+<span class="comment">% Calculating initial velocities in x and z directions for initial state</span>
+<span class="comment">%Since the total velocity is zero this doesn't really matter but for</span>
+<span class="comment">%completeness I included it</span>
+
+vx0 = const.v_0*cos(const.theta_i);
+vz0 = const.v_0*sin(const.theta_i);
+
+<span class="comment">% Creating a column vector of initial conditions</span>
+initial_conditions = [const.x_0 ; vx0 ; const.z_0 ; vz0 ; const.m_0tot ; const.V_0a ; const.m_0a];
+
+<span class="comment">%Integration time vector</span>
+int_time = [0 5];
+
+<span class="comment">%Function handle of state matrix function</span>
+int_fun = @(t,state) state_matrix_func(const,t,state);
+</pre><h2 id="3">Integration and Thrust Calculation</h2><pre class="codeinput"><span class="comment">%Integrating using ode45</span>
+[tout,stateOut] = ode45(int_fun,int_time,initial_conditions);
+
+<span class="comment">%Calculating the thrust and stage using a for loop</span>
+thrust = zeros(length(tout),1);
+stage = zeros(length(tout),1);
+
+<span class="keyword">for</span> i = 1:length(tout)
+    [~,thrust(i),stage(i)] = state_matrix_func(const,tout(i),stateOut(i,:));
+<span class="keyword">end</span>
+</pre><h2 id="4">Verification data</h2><pre class="codeinput">verification = load(<span class="string">'project2verification.mat'</span>);
+time_verification = verification.verification.time;
+height_verification = verification.verification.height;
+distance_verification = verification.verification.distance;
+thrust_verification = verification.verification.thrust;
+velocity_x_verification = verification.verification.velocity_x;
+velocity_z_verification = verification.verification.velocity_y;
+volume_air_verification = verification.verification.volume_air;
+</pre><h2 id="5">Stage calculations</h2><pre class="codeinput"><span class="comment">%Index where the change occurs</span>
+stage2 = find(stage==2,1);
+stage3 = find(stage==3,1);
+stage4 = find(stage==4,1);
+
+<span class="comment">% The transitions between stages in time</span>
+transition1_time = tout(stage2);
+transition2_time = tout(stage3);
+transition3_time = tout(stage4);
+
+<span class="comment">%The transition between stages in x position</span>
+transition1_x = stateOut(stage2,1);
+transition2_x = stateOut(stage3,1);
+transition3_x = stateOut(stage4,1);
+</pre><h2 id="6">Maxima of rocket states</h2><pre class="codeinput">maxX = max(stateOut(:,1));
+maxZ = max(stateOut(:,3));
+maxF = max(thrust);
+
+fprintf(<span class="string">'Max horizontal distance: %2.2f m\n'</span>,maxX);
+fprintf(<span class="string">'Max vertical distance: %2.2f m\n'</span>,maxZ);
+fprintf(<span class="string">'Max thrust: %2.2f N\n'</span>,maxF);
+</pre><pre class="codeoutput">Max horizontal distance: 65.83 m
+Max vertical distance: 17.46 m
+Max thrust: 198.69 N
+</pre><h2 id="7">Plots</h2><pre class="codeinput">figure(1);
+<span class="comment">%POSITION PLOT</span>
+hold <span class="string">on</span>;
+plot(stateOut(:,1),stateOut(:,3),<span class="string">'LineWidth'</span>,1.5);
+plot(distance_verification,height_verification,<span class="string">'LineWidth'</span>,1.5);
+xline(transition1_x);
+xline(transition2_x);
+xline(transition3_x);
+
+grid <span class="string">minor</span>;
+legend(<span class="string">'My data'</span>,<span class="string">'Verification'</span>);
+ylabel(<span class="string">'Height (m)'</span>);
+xlabel(<span class="string">'Horizontal distance (m)'</span>);
+title(<span class="string">'Horizontal vs. Vertical Distance'</span>);
+ylim([0,max(height_verification)]);
+hold <span class="string">off</span>;
+
+
+
+figure(2);
+<span class="comment">%THRUST PLOT</span>
+hold <span class="string">on</span>;
+plot(tout,thrust,<span class="string">'linewidth'</span>,1.5);
+plot(time_verification,thrust_verification,<span class="string">'LineWidth'</span>,1.5);
+xline(transition1_time);
+
+xline(transition2_time);
+xline(transition3_time)
+legend(<span class="string">'My data'</span>,<span class="string">'Verification'</span>);
+ylabel(<span class="string">'Thrust (N)'</span>);
+xlabel(<span class="string">'Time (s)'</span>);
+grid <span class="string">minor</span>;
+xlim([0,0.5]);
+title(<span class="string">'Thrust vs. Time'</span>);
+hold <span class="string">off</span>;
+
+
+figure(3);
+<span class="comment">%AIR VOLUME PLOT</span>
+hold <span class="string">on</span>;
+plot(tout,stateOut(:,6),<span class="string">'linewidth'</span>,1.5);
+plot(time_verification,volume_air_verification,<span class="string">'linewidth'</span>,1.5);
+xline(transition1_time);
+xline(transition2_time);
+xline(transition3_time);
+grid <span class="string">minor</span>;
+ylabel(<span class="string">'Air Volume (m^3)'</span>);
+xlabel(<span class="string">'Time (s)'</span>);
+legend(<span class="string">'My data'</span>,<span class="string">'Verification'</span>);
+xlim([0,0.5]);
+title(<span class="string">'Air Volume vs. Time'</span>)
+hold <span class="string">off</span>;
+
+
+figure(4);
+<span class="comment">%X VELOCITY PLOT</span>
+hold <span class="string">on</span>;
+plot(tout,stateOut(:,2),<span class="string">'linewidth'</span>,1.5);
+plot(time_verification,velocity_x_verification,<span class="string">'LineWidth'</span>,1.5);
+xline(transition1_time);
+xline(transition2_time);
+xline(transition3_time);
+legend(<span class="string">'My data'</span>,<span class="string">'Verification'</span>);
+grid <span class="string">minor</span>;
+xlabel(<span class="string">'Time (s)'</span>);
+ylabel(<span class="string">'X-Velocity (m/s)'</span>);
+title(<span class="string">'X Velocity vs. time'</span>);
+hold <span class="string">off</span>;
+
+
+
+figure(5);
+<span class="comment">%Z VELOCITY PLOT</span>
+hold <span class="string">on</span>;
+plot(tout,stateOut(:,4),<span class="string">'linewidth'</span>,1.5);
+plot(time_verification,velocity_z_verification,<span class="string">'LineWidth'</span>,1.5);
+xline(transition1_time);
+xline(transition2_time);
+xline(transition3_time);
+grid <span class="string">minor</span>;
+xlabel(<span class="string">'Time (s)'</span>);
+ylabel(<span class="string">'Z-Velocity (m/s)'</span>);
+legend(<span class="string">'My data'</span>, <span class="string">'Verification'</span>);
+title(<span class="string">'Z Velocity vs. time'</span>);
+hold <span class="string">off</span>;
+</pre><img vspace="5" hspace="5" src="main_01.png" alt=""> <img vspace="5" hspace="5" src="main_02.png" alt=""> <img vspace="5" hspace="5" src="main_03.png" alt=""> <img vspace="5" hspace="5" src="main_04.png" alt=""> <img vspace="5" hspace="5" src="main_05.png" alt=""> <p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2022a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+% Author(s): Andrew Patella
+% Assignment title: Project 2
+% Purpose: Model flight of bottle rocket using ode45
+% Creation date: 11/06/2023
+% Revisions: N/A
+
+close all; clear; clc;
+
+%% Constants and initial conditions
+
+% Storing constants in a struct using the getConst() function
+const = getConst();
+
+% Calculating initial velocities in x and z directions for initial state
+%Since the total velocity is zero this doesn't really matter but for
+%completeness I included it
+
+vx0 = const.v_0*cos(const.theta_i);
+vz0 = const.v_0*sin(const.theta_i);
+
+% Creating a column vector of initial conditions
+initial_conditions = [const.x_0 ; vx0 ; const.z_0 ; vz0 ; const.m_0tot ; const.V_0a ; const.m_0a];
+
+%Integration time vector
+int_time = [0 5];
+
+%Function handle of state matrix function
+int_fun = @(t,state) state_matrix_func(const,t,state);
+
+%% Integration and Thrust Calculation
+
+%Integrating using ode45
+[tout,stateOut] = ode45(int_fun,int_time,initial_conditions);
+
+%Calculating the thrust and stage using a for loop
+thrust = zeros(length(tout),1);
+stage = zeros(length(tout),1);
+
+for i = 1:length(tout)
+    [~,thrust(i),stage(i)] = state_matrix_func(const,tout(i),stateOut(i,:));
+end
+
+%% Verification data
+verification = load('project2verification.mat');
+time_verification = verification.verification.time;
+height_verification = verification.verification.height;
+distance_verification = verification.verification.distance;
+thrust_verification = verification.verification.thrust;
+velocity_x_verification = verification.verification.velocity_x;
+velocity_z_verification = verification.verification.velocity_y;
+volume_air_verification = verification.verification.volume_air;
+
+%% Stage calculations
+
+%Index where the change occurs 
+stage2 = find(stage==2,1);
+stage3 = find(stage==3,1);
+stage4 = find(stage==4,1);
+
+% The transitions between stages in time 
+transition1_time = tout(stage2);
+transition2_time = tout(stage3);
+transition3_time = tout(stage4);
+
+%The transition between stages in x position
+transition1_x = stateOut(stage2,1);
+transition2_x = stateOut(stage3,1);
+transition3_x = stateOut(stage4,1);
+
+
+
+
+%% Maxima of rocket states
+
+maxX = max(stateOut(:,1));
+maxZ = max(stateOut(:,3));
+maxF = max(thrust);
+
+fprintf('Max horizontal distance: %2.2f m\n',maxX);
+fprintf('Max vertical distance: %2.2f m\n',maxZ);
+fprintf('Max thrust: %2.2f N\n',maxF);
+
+
+%% Plots
+
+figure(1);
+%POSITION PLOT
+hold on;
+plot(stateOut(:,1),stateOut(:,3),'LineWidth',1.5);
+plot(distance_verification,height_verification,'LineWidth',1.5);
+xline(transition1_x);
+xline(transition2_x);
+xline(transition3_x);
+
+grid minor;
+legend('My data','Verification');
+ylabel('Height (m)');
+xlabel('Horizontal distance (m)');
+title('Horizontal vs. Vertical Distance');
+ylim([0,max(height_verification)]);
+hold off;
+
+
+
+figure(2);
+%THRUST PLOT
+hold on;
+plot(tout,thrust,'linewidth',1.5);
+plot(time_verification,thrust_verification,'LineWidth',1.5);
+xline(transition1_time);
+
+xline(transition2_time);
+xline(transition3_time)
+legend('My data','Verification');
+ylabel('Thrust (N)');
+xlabel('Time (s)');
+grid minor;
+xlim([0,0.5]);
+title('Thrust vs. Time');
+hold off;
+
+
+figure(3);
+%AIR VOLUME PLOT
+hold on;
+plot(tout,stateOut(:,6),'linewidth',1.5);
+plot(time_verification,volume_air_verification,'linewidth',1.5);
+xline(transition1_time);
+xline(transition2_time);
+xline(transition3_time);
+grid minor;
+ylabel('Air Volume (m^3)');
+xlabel('Time (s)');
+legend('My data','Verification');
+xlim([0,0.5]);
+title('Air Volume vs. Time')
+hold off;
+
+
+figure(4);
+%X VELOCITY PLOT
+hold on;
+plot(tout,stateOut(:,2),'linewidth',1.5);
+plot(time_verification,velocity_x_verification,'LineWidth',1.5);
+xline(transition1_time);
+xline(transition2_time);
+xline(transition3_time);
+legend('My data','Verification');
+grid minor;
+xlabel('Time (s)');
+ylabel('X-Velocity (m/s)');
+title('X Velocity vs. time');
+hold off;
+
+
+
+figure(5);
+%Z VELOCITY PLOT
+hold on;
+plot(tout,stateOut(:,4),'linewidth',1.5);
+plot(time_verification,velocity_z_verification,'LineWidth',1.5);
+xline(transition1_time);
+xline(transition2_time);
+xline(transition3_time);
+grid minor;
+xlabel('Time (s)');
+ylabel('Z-Velocity (m/s)');
+legend('My data', 'Verification');
+title('Z Velocity vs. time');
+hold off;
+
+
+
+
+
+
+
+
+
+
+##### SOURCE END #####
+--></body></html>
