@@ -1,0 +1,7 @@
+This is my folder for my Aerospace Computational Methods and Scientific Computing Course. The class was a MATLAB course focused on experimentation and modeling. 
+
+The class had 6 coding challenges. These were 24 hour projects focused on some aspect of the course- data analysis, modeling, statistics and other important computational topics. 
+
+The class also had 2 projects. The first project was in fitting models to experimental data. We had a set of thruster force data from sensors as raw voltage output that we had to convert to total thrust and do more calculations with it. We had to prepare a presentation about our assumptions and results. 
+
+The second project was a continuation of this project. We had to individually design a function to integrate that would model the flight of a bottle rocket. We set up whole thermodynamic models and used numerical integrators to propagate the entire flight. Then with a partner we had to modify the values that we would be able to fix as we built these rockets such as coefficient of drag, initial bottle pressure, mass, launch angle and other values. We then had to create a video presentation with a partner about our design and why we picked the parameters we did in order to get the maximum launch distance. 

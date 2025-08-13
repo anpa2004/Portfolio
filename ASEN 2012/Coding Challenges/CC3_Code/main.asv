@@ -1,0 +1,67 @@
+% Author(s): Andrew Patella
+% Assignment title: Coding Challenge 3
+% Purpose:
+% Creation date: 10/16/2023
+% Revisions: N/A
+
+clear; clc; close all;
+
+data = readmatrix("supercomputer-power-flops.csv");
+
+time = data(:,1);
+time = time-1990; %years
+
+time_long = -5:1:40;
+
+flops = data(:,2);
+
+p= 2;
+
+[line,S] = polyfit(time,log(flops),1);
+
+a_1 = exp(line(2));
+a_0= line(1)/log(p);
+
+fit =@(t) a_1*p.^(a_0*t);
+
+fit_1 = fit(time);
+fit_long = fit(time_long);
+string = sprintf('a_0 = %2.4f, a_1 = %2.4f',line(1),line(2));
+
+N = length(time);
+
+delta_1 = N*sum(time_long.^2)-(sum(time_long))^2;
+[extrap_fit,delta] = polyval(line,time_long,S);
+% sigma_y = sqrt(1/(N-2) * sum((fit_1 - line(2)-line(1)*time_long).^2));
+% sigma_A = sigma_y*sqrt(sum(time_long.^2)/delta_1);
+% sigma_B = sigma_y*sqrt(N/delta_1);
+% sigma_q = sqrt(sigma_A.^2 + (time_long.*sigma_B).^2 );
+
+top_error=exp(extrap_fit+2*delta);
+bottom_error = exp(extrap_fit-2*delta);
+
+figure(1);
+hold on;
+scatter(time,flops);
+set(gca,'YScale','log');
+plot(time_long,fit_long,'linewidth',1,'color','blue');
+text(21,fit(31.5),string,'FontAngle','italic');
+xlabel('Years since 1990');
+ylabel('Number of Flops');
+grid on;
+plot(time_long,exp(extrap_fit+2*delta),'linewidth',.75,'color','red','LineStyle','--');
+plot(time_long,exp(extrap_fit-2*delta),'linewidth',.75,'color','red','LineStyle','--');
+title('Supercomputer GFLOPs by year');
+legend('Data','line of best fit','\pm 2\sigma_q','Location','southeast');
+
+hold off;
+
+error_beginning = (top_error(6))-(bottom_error(6))
+
+
+%% Comments 
+
+% The prediction I would trust the most is the one for 1985. This one is
+% only 5 years away from the initial known value. Therefore there is less error. This can also be seen in how the the 95% error interval is smaller at this time.  
+%In 2025, the years are further away so the error bounds are growing awa
+
