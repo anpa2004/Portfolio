@@ -1,0 +1,1 @@
+One time I had time to spare so I wanted to refresh some dynamical modeling. I wrote code to animate n body dynamics numerially. This was really useful and gave me a lot of confidence going into my Junior year where I was going to take Orbital Mechanics. All code is in MATLAB.
