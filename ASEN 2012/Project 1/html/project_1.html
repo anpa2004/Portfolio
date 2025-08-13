@@ -1,0 +1,377 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>project_1</title><meta name="generator" content="MATLAB 9.12"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2023-10-31"><meta name="DC.source" content="project_1.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#2">Changeable parameters for different cases</a></li><li><a href="#3">Inputting Calibration data</a></li><li><a href="#4">Line of Best Fit, 95% conifdence interval</a></li><li><a href="#5">Plotting calibration data with LBF, Error</a></li><li><a href="#6">Converting mV inputs to Force for thrust analysis</a></li></ul></div><pre class="codeinput"> close <span class="string">all</span>; clear; clc;
+</pre><h2 id="2">Changeable parameters for different cases</h2><pre class="codeinput"><span class="comment">%Change these values to analyze different data</span>
+
+<span class="comment">% Test numbers (case 2- testrun11.mat - testrun20.mat)</span>
+first_test=11;
+last_test=20;
+cal_case = 2; <span class="comment">%Static Test Stand Calibration Case #.xlsx, where # is cal_case</span>
+</pre><h2 id="3">Inputting Calibration data</h2><pre class="codeinput"><span class="comment">%Read in calibration data</span>
+calibration_data = readmatrix(sprintf(<span class="string">'Static Test Stand Calibration Case %g.xlsx'</span>,cal_case));
+
+<span class="comment">%Storing calibration data in arrays</span>
+weight = calibration_data(:,1);
+f_0_offset = calibration_data(:,2);
+f_1_offset = calibration_data(:,3);
+f_0_mv = calibration_data(:,4);
+f_1_mv = calibration_data(:,5);
+</pre><h2 id="4">Line of Best Fit, 95% conifdence interval</h2><pre class="codeinput"><span class="comment">%Subtracting channel offset</span>
+f_0_mv = f_0_mv - f_0_offset;
+f_1_mv = f_1_mv - f_1_offset;
+
+<span class="comment">%Since the channels are uneven, the total force is the sum</span>
+ftot_mv = f_0_mv+f_1_mv;
+
+<span class="comment">%Weighted averages of mV reading, converting to adjusted weight</span>
+f_adjusted_0 = weight.*(f_0_mv./(f_0_mv+f_1_mv));
+f_adjusted_1 = weight.*(f_1_mv./(f_0_mv+f_1_mv));
+
+f_adjusted_tot = f_adjusted_0+f_adjusted_1;
+
+<span class="comment">%calculating line of best fit for the data</span>
+[p0,~] = polyfit(f_adjusted_0,f_0_mv,1);
+[p1,~] = polyfit(f_adjusted_1,f_1_mv,1);
+
+<span class="comment">%Sum of data line of best fit</span>
+[ptot,btot] = polyfit(f_adjusted_tot,ftot_mv,1);
+
+<span class="comment">% Arbitrary array for domain of calibration plot for extrapolation</span>
+x = 0:.1:60;
+
+<span class="comment">%Finding sigma for the line of best fit</span>
+[ytot,deltatot] = polyval(ptot,x,btot);
+
+<span class="comment">%Renaming constants for simplicity</span>
+a0 = p0(1);
+b0 = p0(2);
+a1 = p1(1);
+b1 = p1(2);
+a0tot = ptot(1);
+a1tot = ptot(2);
+
+<span class="comment">%Function handles for either channel for calibration</span>
+calibrate_1 = @(fv) (1/a1)*(fv-b1);
+calibrate_0 = @(fv) (1/a0)*(fv-b0);
+
+calibrate_tot = @(fv) (1/a0tot)*(fv-a1tot);
+</pre><h2 id="5">Plotting calibration data with LBF, Error</h2><pre class="codeinput">figure(2);
+hold <span class="string">on</span>;
+scatter(f_adjusted_tot,ftot_mv); <span class="comment">%Caliration data scatter plot</span>
+plot(x,ytot,<span class="string">'color'</span>,<span class="string">'blue'</span>); <span class="comment">%Line of best fit</span>
+plot(x,ytot+2*deltatot,<span class="string">'color'</span>,<span class="string">'#D95319'</span>); <span class="comment">%+/- 2 sigma</span>
+plot(x,ytot-2*deltatot,<span class="string">'color'</span>,<span class="string">"#D95319"</span>);
+grid <span class="string">on</span>;
+xlabel(<span class="string">'Adjusted Weight (lbf)'</span>);
+ylabel(<span class="string">'Measured Load (mV)'</span>);
+title(<span class="string">'Adjusted mV Output for Applied Load'</span>);
+legend(<span class="string">'Calibration data'</span>,<span class="string">'Best Fit line'</span>,<span class="string">'x_best \pm 2\sigma'</span>,<span class="string">'location'</span>,<span class="string">'Northwest'</span>);
+</pre><h2 id="6">Converting mV inputs to Force for thrust analysis</h2><pre class="codeinput"><span class="comment">% Preallocation of cells and structs before for loop</span>
+dimension = last_test;<span class="comment">%-first_test;</span>
+s = strings(dimension,1);
+data = struct(<span class="string">'time'</span>,cell(1,dimension), <span class="string">'mV'</span>,cell(1,dimension));
+mv= cell(1,dimension);
+time = cell(1,dimension);
+f_c_1 = cell(1,dimension);
+f_c_2 = cell(1,dimension);
+f_c_tot = cell(1,dimension);
+delta = cell(1,dimension);
+y = cell(1,dimension);
+delta_cal = cell(1,dimension);
+max_force = zeros(1,dimension);
+max_when = zeros(1,dimension);
+max_error = zeros(1,dimension);
+
+<span class="comment">%All conversions and calculations done in for loop</span>
+<span class="keyword">for</span> i = first_test:last_test
+
+    <span class="comment">%name of file to string (testruni), loading data splitting structs</span>
+    s(i) = <span class="string">"testrun"</span>+i+<span class="string">".mat"</span>;
+    data(i) = load(s(i));
+
+    <span class="comment">%Storing struct data in cells</span>
+    mv{i} = data(i).mV;
+    time{i}=data(i).time;
+
+    <span class="comment">%converting the mv readings to force using calibration line above</span>
+    <span class="keyword">for</span> j = 1:length(mv{1,i})
+        f_c_1{i}(j) = calibrate_0(mv{1,i}(j,1));
+    <span class="keyword">end</span>
+
+    <span class="keyword">for</span> j = 1:length(mv{1,i})
+        f_c_2{i}(j) = calibrate_1(mv{1,i}(j,2));
+    <span class="keyword">end</span>
+
+     <span class="comment">% f_tot = f_0+f_1</span>
+     f_c_tot{i} = f_c_1{i}+f_c_2{i};
+
+     <span class="comment">%Calculating delta for the given mV ranges using polyval</span>
+    [y{i},delta{i}] = polyval(ptot,f_c_tot{i},btot);
+    delta_cal{i} = calibrate_tot(delta{i});
+
+    <span class="comment">%Plotting the results</span>
+    figure(i);
+    hold <span class="string">on</span>;
+    plot(time{1,i},f_c_tot{i}); <span class="comment">%Thrust data</span>
+    title(sprintf(<span class="string">'Test Run %g Thrust data'</span>,i));  <span class="comment">%Changing title for each iteration</span>
+    ylabel(<span class="string">'Force (lbf)'</span>);
+    xlabel(<span class="string">'Time (s)'</span>);
+
+    <span class="comment">%Creating a cloud for +/- 2 sigma interval using patch command</span>
+    patch([time{i} flip(time{i})],[(f_c_tot{i}-delta_cal{i}) flip(f_c_tot{i}+delta_cal{i})],<span class="string">'b'</span>, <span class="string">'FaceAlpha'</span>,0.25, <span class="string">'EdgeColor'</span>,<span class="string">'none'</span>);
+    grid <span class="string">on</span>;
+
+    <span class="comment">%Calculating the max force and associated error</span>
+    [max_force(i),max_when(i)] = max(f_c_tot{i});
+    max_error(i) = delta_cal{i}(max_when(i));
+
+    <span class="comment">%converting index to time</span>
+    timestep = time{i}(3)-time{i}(2);
+    max_when(i) = max_when(i)*timestep;
+
+    <span class="comment">%Plotting max value and text label</span>
+    scatter(max_when(i),max_force(i));
+    text(max_when(i)+.2,max_force(i)-4,sprintf(<span class="string">'(%2.2f s, %2.2f lbf)'</span>,max_when(i),max_force(i)));
+
+    <span class="comment">%Putting an error bar at the peak thrust point</span>
+    errorbar(max_when(i),max_force(i),max_error(i));
+
+    legend(<span class="string">'Force output'</span>,<span class="string">'F\pm 2\sigma'</span>,<span class="string">'Max thrust'</span>)
+    hold <span class="string">off</span>;
+
+    <span class="comment">%printing thrust and associated error</span>
+    fprintf(<span class="string">'Max thrust for case %g is %2.2f \x00B1 %2.2f lbf \n'</span>,i,max_force(i),max_error(i));
+
+
+<span class="keyword">end</span>
+</pre><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2022a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+ close all; clear; clc;
+
+ %% Changeable parameters for different cases
+%Change these values to analyze different data
+
+% Test numbers (case 2- testrun11.mat - testrun20.mat)
+first_test=11;
+last_test=20;
+cal_case = 2; %Static Test Stand Calibration Case #.xlsx, where # is cal_case
+
+
+
+%% Inputting Calibration data
+%Read in calibration data
+calibration_data = readmatrix(sprintf('Static Test Stand Calibration Case %g.xlsx',cal_case));
+
+%Storing calibration data in arrays
+weight = calibration_data(:,1);
+f_0_offset = calibration_data(:,2);
+f_1_offset = calibration_data(:,3);
+f_0_mv = calibration_data(:,4);
+f_1_mv = calibration_data(:,5);
+
+%% Line of Best Fit, 95% conifdence interval
+%Subtracting channel offset
+f_0_mv = f_0_mv - f_0_offset;
+f_1_mv = f_1_mv - f_1_offset;
+
+%Since the channels are uneven, the total force is the sum
+ftot_mv = f_0_mv+f_1_mv;
+
+%Weighted averages of mV reading, converting to adjusted weight
+f_adjusted_0 = weight.*(f_0_mv./(f_0_mv+f_1_mv));
+f_adjusted_1 = weight.*(f_1_mv./(f_0_mv+f_1_mv));
+
+f_adjusted_tot = f_adjusted_0+f_adjusted_1;
+
+%calculating line of best fit for the data
+[p0,~] = polyfit(f_adjusted_0,f_0_mv,1);
+[p1,~] = polyfit(f_adjusted_1,f_1_mv,1);
+
+%Sum of data line of best fit
+[ptot,btot] = polyfit(f_adjusted_tot,ftot_mv,1);
+
+% Arbitrary array for domain of calibration plot for extrapolation
+x = 0:.1:60;
+
+%Finding sigma for the line of best fit
+[ytot,deltatot] = polyval(ptot,x,btot);
+
+%Renaming constants for simplicity
+a0 = p0(1);
+b0 = p0(2);
+a1 = p1(1);
+b1 = p1(2);
+a0tot = ptot(1);
+a1tot = ptot(2);
+
+%Function handles for either channel for calibration
+calibrate_1 = @(fv) (1/a1)*(fv-b1);
+calibrate_0 = @(fv) (1/a0)*(fv-b0);
+
+calibrate_tot = @(fv) (1/a0tot)*(fv-a1tot);
+
+%% Plotting calibration data with LBF, Error
+figure(2);
+hold on;
+scatter(f_adjusted_tot,ftot_mv); %Caliration data scatter plot
+plot(x,ytot,'color','blue'); %Line of best fit
+plot(x,ytot+2*deltatot,'color','#D95319'); %+/- 2 sigma
+plot(x,ytot-2*deltatot,'color',"#D95319");
+grid on;
+xlabel('Adjusted Weight (lbf)');
+ylabel('Measured Load (mV)');
+title('Adjusted mV Output for Applied Load');
+legend('Calibration data','Best Fit line','x_best \pm 2\sigma','location','Northwest');
+
+
+%% Converting mV inputs to Force for thrust analysis
+
+% Preallocation of cells and structs before for loop
+dimension = last_test;%-first_test;
+s = strings(dimension,1);
+data = struct('time',cell(1,dimension), 'mV',cell(1,dimension));
+mv= cell(1,dimension);
+time = cell(1,dimension);
+f_c_1 = cell(1,dimension);
+f_c_2 = cell(1,dimension);
+f_c_tot = cell(1,dimension);
+delta = cell(1,dimension);
+y = cell(1,dimension);
+delta_cal = cell(1,dimension);
+max_force = zeros(1,dimension);
+max_when = zeros(1,dimension);
+max_error = zeros(1,dimension);
+
+%All conversions and calculations done in for loop
+for i = first_test:last_test
+
+    %name of file to string (testruni), loading data splitting structs
+    s(i) = "testrun"+i+".mat";
+    data(i) = load(s(i));
+
+    %Storing struct data in cells
+    mv{i} = data(i).mV;
+    time{i}=data(i).time;
+
+    %converting the mv readings to force using calibration line above
+    for j = 1:length(mv{1,i})
+        f_c_1{i}(j) = calibrate_0(mv{1,i}(j,1));
+    end
+    
+    for j = 1:length(mv{1,i})
+        f_c_2{i}(j) = calibrate_1(mv{1,i}(j,2));
+    end
+
+     % f_tot = f_0+f_1
+     f_c_tot{i} = f_c_1{i}+f_c_2{i};
+     
+     %Calculating delta for the given mV ranges using polyval
+    [y{i},delta{i}] = polyval(ptot,f_c_tot{i},btot);
+    delta_cal{i} = calibrate_tot(delta{i});
+
+    %Plotting the results
+    figure(i);
+    hold on;
+    plot(time{1,i},f_c_tot{i}); %Thrust data
+    title(sprintf('Test Run %g Thrust data',i));  %Changing title for each iteration
+    ylabel('Force (lbf)');
+    xlabel('Time (s)');
+
+    %Creating a cloud for +/- 2 sigma interval using patch command
+    patch([time{i} flip(time{i})],[(f_c_tot{i}-delta_cal{i}) flip(f_c_tot{i}+delta_cal{i})],'b', 'FaceAlpha',0.25, 'EdgeColor','none');
+    grid on;
+      
+    %Calculating the max force and associated error
+    [max_force(i),max_when(i)] = max(f_c_tot{i});
+    max_error(i) = delta_cal{i}(max_when(i));
+
+    %converting index to time
+    timestep = time{i}(3)-time{i}(2);
+    max_when(i) = max_when(i)*timestep;
+
+    %Plotting max value and text label
+    scatter(max_when(i),max_force(i));
+    text(max_when(i)+.2,max_force(i)-4,sprintf('(%2.2f s, %2.2f lbf)',max_when(i),max_force(i)));
+
+    %Putting an error bar at the peak thrust point
+    errorbar(max_when(i),max_force(i),max_error(i));
+
+    legend('Force output','F\pm 2\sigma','Max thrust')
+    hold off;
+    
+    %printing thrust and associated error
+    fprintf('Max thrust for case %g is %2.2f \x00B1 %2.2f lbf \n',i,max_force(i),max_error(i));
+
+
+end
+
+
+##### SOURCE END #####
+--></body></html>
