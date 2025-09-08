@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import root_scalar
-from math_tools import *
-from ephemeris import Ephemeris
+from orbit_package.math_tools import *
+from orbit_package.ephemeris import Ephemeris
 import datetime
 
 class Orbit():
@@ -274,4 +274,37 @@ class Orbit():
         print(f'True Anomaly: {ele['nu']}')
         print(f'Orbit Type: {ele['orbit_type']}')
     
+    def fill_elements(self,mu:float,inc:float,raan:float,argp:float,ecc:float,rp:float,nu:float)->dict:
+        """
+        This function takes in minimal information about an orbit and creates the whole elements dict from the information given.
+        """
 
+        # Finding semi major axis
+        sma = rp/(1-ecc)
+
+        # Finding period
+        T = 2*np.pi*sma**(3/2)/np.sqrt(mu)
+
+        n = 2*np.pi/T
+
+        if ecc<1:
+            # Eccentric Anomaly
+            E = np.arccos((ecc+np.cos(nu))/(1+ecc*np.cos(nu)))
+
+            # Eccentric Anomaly Quadrant Correction
+            if nu > np.pi:
+                E = 2*np.pi - E
+
+            # Mean Anomaly
+            M = E - ecc*np.sin(E)
+        else:
+            E = None
+            M = None
+
+        if np.abs(inc) < np.pi:
+            orbit_type = 'prograde'
+        else: 
+            orbit_type = 'retrograde'
+
+        ele = {"inc": inc,"raan":raan,"ecc":ecc,"argp":argp,"nu":nu,"T":T,"sma":sma,"E":E,"M":M,"n":n,"orbit_type":orbit_type}
+        return ele

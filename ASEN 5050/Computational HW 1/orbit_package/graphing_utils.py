@@ -1,10 +1,12 @@
 import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
-from ephemeris import Ephemeris
+from orbit_package.ephemeris import Ephemeris
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import LineCollection
 import numpy as np
+
+
 class Graph():
     def plot_dt(self,dt:list,val:list,name:list)->None:
         """
@@ -155,6 +157,19 @@ class Graph():
         plt.ylabel('Inclination (rad)')
         plt.title(f'Inclination vs Time ({ephemeris.data[0][-1]})')
         plt.show()
-    
+
+    def plot_eph_rv(self,eph:Ephemeris)->None:
+        """ 
+        This function takes in an ephemeris object and creates an r-v graph
+        """
+        r = eph.all_r_norm()
+        v = eph.all_v_norm()
+
+        plt.plot(r,v)
+        plt.xlabel('Radius (km)')  
+        plt.ylabel('Velocity (km/s)')  
+        plt.title('Propagated orbit R-V Space')
+        plt.grid()
+        plt.show()
 
         
