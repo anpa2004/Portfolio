@@ -3,6 +3,8 @@ from scipy.optimize import root_scalar
 from orbit_package.math_tools import *
 from orbit_package.ephemeris import Ephemeris
 import datetime
+from orbit_package.math_tools import cubic_spline_interpolation
+
 
 class Orbit():
     def orbital_elements(self,r_vec:list,v_vec:list,mu:float)->dict:
@@ -308,3 +310,89 @@ class Orbit():
 
         ele = {"inc": inc,"raan":raan,"ecc":ecc,"argp":argp,"nu":nu,"T":T,"sma":sma,"E":E,"M":M,"n":n,"orbit_type":orbit_type}
         return ele
+
+    def difference_eph(self,ephemerides:list)->dict:
+        """ 
+        This function calculates the interpolated differences between two ephemerides
+        """
+        eph1 = ephemerides[0]
+        eph2 = ephemerides[1]
+
+        x1 = eph1.all_x()
+        y1 = eph1.all_y()
+        z1 = eph1.all_z()
+        x2 = eph2.all_x()
+        y2 = eph2.all_y()
+        z2 = eph2.all_z()
+        t1 = eph1.all_t()
+        t2 = eph2.all_t()
+
+        # Creating timestamps for interpolation
+        t1ts = [t.timestamp() for t in t1]
+        t2ts = [t.timestamp() for t in t2]
+
+        # Interpolating r2 to be at t1 timestamps
+        x2i = cubic_spline_interpolation(t2ts,x2,t1ts)
+        y2i = cubic_spline_interpolation(t2ts,y2,t1ts)
+        z2i = cubic_spline_interpolation(t2ts,z2,t1ts)
+
+        dx = [x2i[i]-x1[i] for i in range(len(x1))]
+        dy = [y2i[i]-y1[i] for i in range(len(x1))]
+        dz = [z2i[i]-z1[i] for i in range(len(x1))]
+
+        dr = []
+        for i in range(len(dx)):
+            dr.append(np.sqrt(dx[i]**2+dy[i]**2+dz[i]**2))
+
+        diff = {"dx":dx,"dy":dy,"dz":dz,"dr":dr,"t":t1}
+        return diff
+    
+    def fill_eph_osculating(self,eph:Ephemeris,mu:float)->Ephemeris:
+        """ 
+        This function takes an ephemeris object and calculates the osculating elements and fills them in
+
+        Args: 
+            eph: ephemeris object to edit
+            mu: gravitational parameter of the orbited body
+
+        Returns:
+            eph1: ephemeris object with the osculating elements
+        """
+
+        r_list = eph.all_r()
+        v_list = eph.all_v()
+
+        elements = []
+        for i in range(len(r_list)):
+            elements = self.orbital_elements(r_list[i],v_list[i],mu)
+            eph.data[i][5] = elements
+        
+        return eph
+    
+    def lamberts(self,r1v:list,r2v:list,t:float,mu:float)->list:
+        """
+        This function takes in two observed positions of a satellite's orbit and a given 
+        transfer time and calculates the velocity vectors at each point to be used in propagation 
+        and orbit construction
+
+        Args: 
+            r1v: vector of sat at t1
+            r2v: vector of sat at t1+t=t2
+            t: transfer time
+            mu: gravitational parameter
+
+        Returns:
+            v1v: velocity vector at t1
+            v2v: velocity vector at t2
+
+        """
+
+        # Finding c
+        cv = r2v-r1v
+
+        r1 = np.linalg.norm(r1v)
+        r2 = np.linalg.norm(r2v)
+        c = np.linalg.norm(cv)
+        
+        # Finding space triangle perimeter
+        am = 0.25*(r1+r2+c)

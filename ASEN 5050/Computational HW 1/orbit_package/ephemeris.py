@@ -4,36 +4,28 @@ from orbit_package.math_tools import *
 import datetime
 
 #orb = orbit()
-class Ephemeris():
-    def __init__(self,t:list,r_vec: list=None, v_vec:list = None,elements:dict=None,frame:str = None,epoch:datetime.datetime = None,propagation_type: str = None,dt:list=None):
-        data = []
-        # [t[i],elements[i],r_vec[i],v_vec[i],dt[i],propagation_type]
+class Ephemeris:
+    def __init__(self, t: list, r_vec: list = None, v_vec: list = None,
+                 elements: dict = None, frame: str = None,
+                 epoch: datetime.datetime = None, propagation_type: str = None,
+                 dt: list = None,osculating:list = None):
+
         if not propagation_type:
             propagation_type = 'NO_PROPAGATION_TYPE'
-        for i in range(len(t)):
-            sub_list = [t[i]]
-            if elements[i]:
-                sub_list.append(elements[i])
-            else: 
-                sub_list.append(None)
-            if r_vec[i]:
-                sub_list.append(r_vec[i])
-            else: 
-                sub_list.append(None)
-            if v_vec[i]:
-                sub_list.append(v_vec[i])
-            else: 
-                sub_list.append(None)
-            if dt[i]:
-                sub_list.append(dt[i])
-            else: 
-                sub_list.append(None)
-            sub_list.append(propagation_type)
 
+        data = []
+        for i in range(len(t)):
+            sub_list = [
+                t[i],
+                elements[i] if elements is not None else None,
+                r_vec[i] if r_vec is not None else None,
+                v_vec[i] if v_vec is not None else None,
+                dt[i] if dt is not None else None,
+                osculating[i] if osculating is not None else None,
+                propagation_type
+            ]
             data.append(sub_list)
-            
-                
-                    
+
         self.data = data
         self.epoch = epoch
         self.frame = frame
@@ -123,6 +115,15 @@ class Ephemeris():
             ele_list.append(dat[1]['sma'])
         return ele_list
     
+    def all_ecc(self):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[1]['ecc'])
+        return ele_list
+    
     def all_inc(self,unit:str='RAD'):
         """ 
         This function returns a list of every dt value contained in the ephemeris object
@@ -156,3 +157,91 @@ class Ephemeris():
             ele_list = [x*np.pi/180 for x in ele_list]
         return ele_list
     
+    def all_x(self):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        r_list = []
+        for dat in self.data:
+            r_list.append(dat[2][0])
+        return r_list
+    
+    def all_y(self):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        r_list = []
+        for dat in self.data:
+            r_list.append(dat[2][1])
+        return r_list
+    
+    def all_z(self):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        r_list = []
+        for dat in self.data:
+            r_list.append(dat[2][2])
+        return r_list
+    
+    def all_nu_osc(self,unit:str='RAD'):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[5]['nu'])
+        if unit.upper() == 'DEG':
+            ele_list = [x*np.pi/180 for x in ele_list]
+        return ele_list
+    
+    def all_sma_osc(self):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[5]['sma'])
+        return ele_list
+    
+    def all_ecc_osc(self):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[5]['ecc'])
+        return ele_list
+    
+    def all_inc_osc(self,unit:str='RAD'):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[5]['inc'])
+        if unit.upper() == 'DEG':
+            ele_list = [x*np.pi/180 for x in ele_list]
+        return ele_list
+    
+    def all_raan_osc(self,unit:str = 'RAD'):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[5]['raan'])
+        if unit.upper() == 'DEG':
+            ele_list = [x*np.pi/180 for x in ele_list]
+        return ele_list
+    
+    def all_argp_osc(self,unit:str = 'RAD'):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[5]['argp'])
+        if unit.upper() == 'DEG':
+            ele_list = [x*np.pi/180 for x in ele_list]
+        return ele_list
