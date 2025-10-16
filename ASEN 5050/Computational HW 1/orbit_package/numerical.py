@@ -11,7 +11,7 @@ class Integrator():
     ode45: a method for doing numerical integration with a RK45 scheme (technically can be used for any RK scheme)
     
     """
-    def ode45(self,f,x0,tspan,other=None,tval=None,method = 'RK45',dense = False):
+    def ode45(self,f,x0,tspan,other=None,tval=None,method = 'RK45',dense = False,rtol:float=1e-10):
         """ 
         This function is designed to mimic ode45. 
 
@@ -38,9 +38,9 @@ class Integrator():
                 return f(t,x)
         
         if tval is None:
-            solution = solve_ivp(ode_func,tspan,x0,method = method,dense_output=dense)
+            solution = solve_ivp(ode_func,tspan,x0,method = method,dense_output=dense,rtol=rtol)
         else:
-            solution = solve_ivp(ode_func,tspan,x0,method=method,t_eval = tval,dense_output=dense)
+            solution = solve_ivp(ode_func,tspan,x0,method=method,t_eval = tval,dense_output=dense,rtol=rtol)
 
         # Access the results
         t = solution.t
@@ -69,7 +69,7 @@ class Integrator():
             eph = Ephemeris(time,frame=frame,epoch=epoch,r_vec=r_list,v_vec=v_list,propagation_type = propagation_type,dt=dt)
         if prop_type.upper() == '2BODY_NODYN':
             # Propagation from two_body_dynbodies()
-            time = [datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(seconds=t0) for t0 in t]
+            time = [datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(seconds=float(t0)) for t0 in t]
             frame = "ECI_TOD"
             epoch = datetime.datetime.now(datetime.timezone.utc)
             r_list = [v[0:3] for v in x.T]

@@ -7,6 +7,8 @@ def cos(x):
 def sin(x):
     return np.sin(x)
 
+def cot(x):
+    return 1/np.tan(x)
 
 def cubic_spline_interpolation(x,y,xq):
     """ 

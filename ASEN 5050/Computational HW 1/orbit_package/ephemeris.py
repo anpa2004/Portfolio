@@ -157,6 +157,33 @@ class Ephemeris:
             ele_list = [x*np.pi/180 for x in ele_list]
         return ele_list
     
+    def all_xd(self):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        r_list = []
+        for dat in self.data:
+            r_list.append(dat[3][0])
+        return r_list
+    
+    def all_yd(self):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        r_list = []
+        for dat in self.data:
+            r_list.append(dat[3][1])
+        return r_list
+    
+    def all_zd(self):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        r_list = []
+        for dat in self.data:
+            r_list.append(dat[3][2])
+        return r_list
+    
     def all_x(self):
         """ 
         This function returns a list of every position vector contained in the ephemeris object
@@ -194,6 +221,23 @@ class Ephemeris:
         if unit.upper() == 'DEG':
             ele_list = [x*np.pi/180 for x in ele_list]
         return ele_list
+    def all_h(self):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        r_list = []
+        for dat in self.data:
+            r_list.append(dat[1]['h'])
+        return r_list
+    def all_energy(self):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        r_list = []
+        for dat in self.data:
+            r_list.append(dat[1]['energy'])
+        return r_list
+    
     
     def all_sma_osc(self):
         """ 
