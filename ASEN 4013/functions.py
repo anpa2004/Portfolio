@@ -161,7 +161,7 @@ def find_f(Tt3,Tt4,etab,hpr,tol=1e-6,nmax=100,SI = True,K = True,pr = False,R=Tr
             # Iterating until the stopping conditions are met
             while np.abs(fn-fn1)>tol and n<nmax:
                 if pr:
-                    print(f"f = {fn}, ht4 = {ht4}, n = {n}")
+                    print(f"    f = {fn}, ht4 = {ht4}, n = {n}")
 
                 # Set new f_{n-1}
                 fn1 = fn
@@ -177,7 +177,9 @@ def find_f(Tt3,Tt4,etab,hpr,tol=1e-6,nmax=100,SI = True,K = True,pr = False,R=Tr
                 # Stopping infinite loop
                 if n == nmax:
                     print('WARNING- Max iterations met')
-            return fn,ht4
+            if pr:
+                print(f"    f = {fn}, ht4 = {ht4}, n = {n}")
+            return fn,ht3,ht4
         else:
             ht3 = cubic_spline_interpolation(TC,hf0,Tt3) 
             f0 = flist[0]
@@ -196,7 +198,7 @@ def find_f(Tt3,Tt4,etab,hpr,tol=1e-6,nmax=100,SI = True,K = True,pr = False,R=Tr
             # Iterating until the stopping conditions are met
             while np.abs(fn-fn1)>tol and n<nmax:
                 if pr:
-                    print(f"f = {fn}, ht4 = {ht4}, n = {n}")
+                    print(f"    f = {fn}, ht4 = {ht4}, n = {n}")
 
                 # Set new f_{n-1}
                 fn1 = fn
@@ -212,7 +214,9 @@ def find_f(Tt3,Tt4,etab,hpr,tol=1e-6,nmax=100,SI = True,K = True,pr = False,R=Tr
                 # Stopping infinite loop
                 if n == nmax:
                     print('WARNING- Max iterations met')
-            return fn,ht4
+            if pr:
+                    print(f"    f = {fn}, ht4 = {ht4}, n = {n}")
+            return fn,ht3,ht4
     else:
         TK,TC, hf0,Prf0,hf169,Prf169,hf338,Prf338,hf507,Prf507,hf676,Prf676 = extract_appl(SI=False)
         if R:
@@ -250,7 +254,7 @@ def find_f(Tt3,Tt4,etab,hpr,tol=1e-6,nmax=100,SI = True,K = True,pr = False,R=Tr
                 # Stopping infinite loop
                 if n == nmax:
                     print('WARNING- Max iterations met')
-            return fn,ht4
+            return fn,ht3,ht4
         else:
             ht3 = cubic_spline_interpolation(TC,hf0,Tt3) 
             f0 = flist[0]
@@ -285,5 +289,206 @@ def find_f(Tt3,Tt4,etab,hpr,tol=1e-6,nmax=100,SI = True,K = True,pr = False,R=Tr
                 # Stopping infinite loop
                 if n == nmax:
                     print('WARNING- Max iterations met')
-            return fn,ht4
+            return fn,ht3,ht4
+        
+
+
+def pca(givens:dict,model:str = 'TURBOJET',SI:bool =True)->dict:
+    """  
+    This function performs Parametric Cycle Analysis for a real engine using the algorithms 
+    described in Chapter 7 of Mattingly. 
+    
+    Args:
+        givens: A dict containing all the necessary values, given or assumed. See Mattingly for required info
+        model: String dictating which algorithm to follow (TURBOJET or TURBOFAN)
+        SI: bool for what type of units, defaults to True (meaning SI). Also assumes then in kJ/kg per table entries
+
+    Returns:
+        solution: dict containing the helpful values to return
+    """
+    #for turbofan dev
+    #M0,T0,gac,cpc,gat,cpt,hpr,pid_max,pib,pin,ec,et,etab,etam,P0P9,Tt4,pic
+#    givens_fan = {"M0":0.8,"T0":390,"gac":1.4,"cpc":0.24,"gat":1.33,"cpt":0.276,"hpr":18400,"pid_max":0.99,
+#           "pib":0.96,"pin":0.99,"ec":0.9,"et":0.9,"etab":0.99,"etam":0.99,"P0P9":0.5,"Tt4":2420,"pic":10,"pifn":0.99,
+#           "ef":0.89,"pif":1.65,"alpha":7}
+
+    if model.upper() == 'TURBOJET':
+        M0,T0,gac,cpc,gat,cpt,hpr,pid_max,pib,pin,ec,et,etab,etam,P0P9,Tt4,pic = givens.items()
+        M0 = M0[1]
+        T0 = T0[1]
+        gac = gac[1]
+        cpc = cpc[1]
+        gat = gat[1]
+        cpt = cpt[1]
+        hpr = hpr[1]
+        pid_max = pid_max[1]
+        pib = pib[1]
+        pin = pin[1]
+        ec = ec[1]
+        et = et[1]
+        etab = etab[1]
+        etam = etam[1]
+        P0P9 = P0P9[1]
+        Tt4 = Tt4[1]
+        pic = pic[1]
+
+        # Defining gc
+        if SI:
+            gc = 1
+        else:
+            gc = 32.174
+
+        print('Freestream and Ram Properties')
+        Rc = (gac - 1)/gac*cpc
+        Rt = (gat - 1)/gat*cpt
+        if SI:
+            a0 = np.sqrt(gac*Rc*gc*T0*1000)
+        V0 = a0*M0
+        taur = 1 + (gac-1)/2*M0**2
+        pir = taur**(gac/(gac-1))
+        # Finding eta_r
+        if M0<1:
+            etar = 1
+        elif M0>1 and M0<5:
+            etar = 1 - 0.075*(M0 - 1)**1.35
+        else:
+            etar = 800/(M0**4 + 935)
+        print(f'    R_c = {round(Rc,4)} kJ/kgK, R_t = {round(Rt,4)} kJ/kgK')
+        print(f'    a_0 = {round(a0,4)} m/s, V_0 = {round(V0,4)} m/s')
+        print(f'    tau_r = {round(taur,4)}, pi_r = {round(pir,4)}, eta_r = {round(etar,4)}')
+
+        print('Inlet Diffuser')
+        pid = pid_max*etar
+        taul = cpt*Tt4/(cpc*T0)
+        print(f'    pi_d = {round(pid,4)}, tau_lambda = {round(taul,4)}')
+
+        print('Compressor')
+        tauc = pic**((gac - 1)/(gac*ec))
+        etac = (pic**((gac-1)/gac)-1)/(tauc - 1)
+        Tt3 = T0*taur*tauc
+        print(f'    tau_c = {round(tauc,4)}, eta_c = {round(etac,4)}, Tt3 = {round(Tt3,4)}')
+
+        print('Iterating to find ht4 and f')
+        f,ht3,ht4 = find_f(Tt3,Tt4,etab,hpr,pr = True)
+        print(f'    Final Values: f = {round(float(f),6)}, ht4 = {round(float(ht4),4)} kJ/kg')
+
+        print('Turbine Properties')
+        taut = 1 - 1/(etam*(1+f))*taur/taul*(tauc-1)
+        pit = taut**(gat/((gat-1)*et))
+        etat = (1 - taut)/(1-taut**(1/et))
+        print(f'    tau_t = {round(taut,4)}, pi_t = {round(pit,4)}, eta_t = {round(etat, 4)}')
+
+        print('Exit Properties')
+        Pt9P9 = P0P9*pir*pid*pic*pib*pit*pin
+        M9 = np.sqrt(2/(gat-1)*(Pt9P9**((gat-1)/gat)-1))
+        T9T0 = Tt4*taut/T0/(Pt9P9**((gat-1)/gat))
+        T9 = T9T0*T0
+        V9a0 = M9*np.sqrt(gat*Rt*T9/(gac*Rc*T0))
+        print(f'    Pt9/P9 = {round(Pt9P9,4)}, T9 = {round(T9,4)} K, T9/T0 = {round(T9T0,4)}')
+        print(f'    M9 = {round(M9,4)}, V9/a0 = {round(V9a0,4)}')
+
+        print('Performance Properties')
+        Fm0 = a0/gc*((1+f)*V9a0 - M0 + (1+f)*Rt*T9T0/(Rc*V9a0)*(1-P0P9)/gac)
+        S = f/Fm0*1e6
+        etaTH = a0**2*((1+f)*V9a0**2 - M0**2)/(2*gc*f*hpr)/1000
+        etap = 2*gc*V0*Fm0/(a0**2*((1+f)*V9a0**2 - M0**2))
+        etaO = etaTH*etap
+        print(f'    F/m0 = {round(Fm0,4)} N/kg/s, S = {round(S,4)} mg/s/kN')
+        print(f'    eta_TH = {round(etaTH,4)}, eta_p = {round(etap,4)}, eta_O = {round(etaO,4)}')
+
+        solution = {"Rc":Rc,"Rt":Rt,"a0":float(a0),"V0":float(V0),"taur":taur,"pir":pir,"etar":etar,"pid":pid,
+                    "taul":taul,"tauc":tauc,"etac":etac,"Tt3":Tt3,"f":float(f),"ht3":float(ht3),"taut":float(taut),
+                    "pit":float(pit),"etat":float(etat),"Pt9P9":float(Pt9P9),"M9":float(M9),"T9T0":float(T9T0),"V9a0":float(V9a0),"Fm0":float(Fm0),
+                    "S":float(S),"etaTH":float(etaTH),"etap":float(etap),"etaO":float(etaO)}
+        return solution
+    elif model.upper() == 'TURBOFAN':
+        print('WARNING: TURBOFAN NOT COMPLETED')
+        M0,T0,gac,cpc,gat,cpt,hpr,pid_max,pib,pin,ec,et,etab,etam,P0P9,Tt4,pic,pifn,ef,pif,alpha = givens.items()
+        M0 = M0[1]
+        T0 = T0[1]
+        gac = gac[1]
+        cpc = cpc[1]
+        gat = gat[1]
+        cpt = cpt[1]
+        hpr = hpr[1]
+        pid_max = pid_max[1]
+        pib = pib[1]
+        pin = pin[1]
+        ec = ec[1]
+        et = et[1]
+        etab = etab[1]
+        etam = etam[1]
+        P0P9 = P0P9[1]
+        Tt4 = Tt4[1]
+        pic = pic[1]
+
+        # Defining gc
+        if SI:
+            gc = 1
+        else:
+            gc = 32.174
+
+        print('Freestream and Ram Properties')
+        Rc = (gac - 1)/gac*cpc
+        Rt = (gat - 1)/gat*cpt
+        if SI:
+            a0 = np.sqrt(gac*Rc*gc*T0*1000)
+        V0 = a0*M0
+        taur = 1 + (gac-1)/2*M0**2
+        pir = taur**(gac/(gac-1))
+        # Finding eta_r
+        if M0<1:
+            etar = 1
+        elif M0>1 and M0<5:
+            etar = 1 - 0.075*(M0 - 1)**1.35
+        else:
+            etar = 800/(M0**4 + 935)
+        print(f'    R_c = {round(Rc,4)} kJ/kgK, R_t = {round(Rt,4)} kJ/kgK')
+        print(f'    a_0 = {round(a0,4)} m/s, V_0 = {round(V0,4)} m/s')
+        print(f'    tau_r = {round(taur,4)}, pi_r = {round(pir,4)}, eta_r = {round(etar,4)}')
+
+        print('Inlet Diffuser')
+        pid = pid_max*etar
+        taul = cpt*Tt4/(cpc*T0)
+        print(f'    pi_d = {round(pid,4)}, tau_lambda = {round(taul,4)}')
+
+        print('Compressor')
+        tauc = pic**((gac - 1)/(gac*ec))
+        etac = (pic**((gac-1)/gac)-1)/(tauc - 1)
+        Tt3 = T0*taur*tauc
+        print(f'    tau_c = {round(tauc,4)}, eta_c = {round(etac,4)}, Tt3 = {round(Tt3,4)}')
+
+        print('Iterating to find ht4 and f')
+        f,ht3,ht4 = find_f(Tt3,Tt4,etab,hpr,pr = True)
+        print(f'    Final Values: f = {round(float(f),6)}, ht4 = {round(float(ht4),4)} kJ/kg')
+
+        print('Turbine Properties')
+        taut = 1 - 1/(etam*(1+f))*taur/taul*(tauc-1)
+        pit = taut**(gat/((gat-1)*et))
+        etat = (1 - taut)/(1-taut**(1/et))
+        print(f'    tau_t = {round(taut,4)}, pi_t = {round(pit,4)}, eta_t = {round(etat, 4)}')
+
+        print('Exit Properties')
+        Pt9P9 = P0P9*pir*pid*pic*pib*pit*pin
+        M9 = np.sqrt(2/(gat-1)*(Pt9P9**((gat-1)/gat)-1))
+        T9T0 = Tt4*taut/T0/(Pt9P9**((gat-1)/gat))
+        T9 = T9T0*T0
+        V9a0 = M9*np.sqrt(gat*Rt*T9/(gac*Rc*T0))
+        print(f'    Pt9/P9 = {round(Pt9P9,4)}, T9 = {round(T9,4)} K, T9/T0 = {round(T9T0,4)}')
+        print(f'    M9 = {round(M9,4)}, V9/a0 = {round(V9a0,4)}')
+
+        print('Performance Properties')
+        Fm0 = a0/gc*((1+f)*V9a0 - M0 + (1+f)*Rt*T9T0/(Rc*V9a0)*(1-P0P9)/gac)
+        S = f/Fm0*1e6
+        etaTH = a0**2*((1+f)*V9a0**2 - M0**2)/(2*gc*f*hpr)/1000
+        etap = 2*gc*V0*Fm0/(a0**2*((1+f)*V9a0**2 - M0**2))
+        etaO = etaTH*etap
+        print(f'    F/m0 = {round(Fm0,4)} N/kg/s, S = {round(S,4)} mg/s/kN')
+        print(f'    eta_TH = {round(etaTH,4)}, eta_p = {round(etap,4)}, eta_O = {round(etaO,4)}')
+
+        solution = {"Rc":Rc,"Rt":Rt,"a0":float(a0),"V0":float(V0),"taur":taur,"pir":pir,"etar":etar,"pid":pid,
+                    "taul":taul,"tauc":tauc,"etac":etac,"Tt3":Tt3,"f":float(f),"ht3":float(ht3),"taut":float(taut),
+                    "pit":float(pit),"etat":float(etat),"Pt9P9":float(Pt9P9),"M9":float(M9),"T9T0":float(T9T0),"V9a0":float(V9a0),"Fm0":float(Fm0),
+                    "S":float(S),"etaTH":float(etaTH),"etap":float(etap),"etaO":float(etaO)}
+        return solution
     
