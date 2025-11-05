@@ -1,11 +1,17 @@
 import numpy as np
 from scipy.optimize import root_scalar
-from orbit_package.math_tools import *
-from orbit_package.ephemeris import Ephemeris
 import datetime
-from orbit_package.math_tools import cubic_spline_interpolation
 from numpy.linalg import norm
 from scipy.optimize import minimize
+try:
+    from orbit_package.math_tools import *
+    from orbit_package.ephemeris import Ephemeris
+    from orbit_package.math_tools import cubic_spline_interpolation
+except:
+    from math_tools import *
+    from ephemeris import Ephemeris
+    from math_tools import cubic_spline_interpolation
+
 
 
 class Orbit():
@@ -290,6 +296,35 @@ class Orbit():
             # raise RuntimeError("e too close to 1. Use universal-variable solver.")
             return nu, elements.get('M', 0.0), None
     
+    def tof_two_nu(self,nu1:float,nu2:float,a:float,e:float,mu:float)->float:
+        """ 
+        This function calcuates the time of flight between two values of true anomaly
+    
+        Args:
+            nu1: true anomaly at point 1
+            nu2: true anomaly at point 2
+            a: semimajor axis
+            e: eccentricity
+            mu: gravitational parameter
+
+        Returns:
+            t: time between the two points
+        """
+
+        n = np.sqrt(mu/a**3)
+        E1 = 2*np.arctan(np.sqrt((1-e)/(1+e))*np.tan(nu1/2))
+        if E1 < 0:
+            E1 += 2*np.pi
+        E2 = 2*np.arctan(np.sqrt((1-e)/(1+e))*np.tan(nu2/2))
+        if E2 < 0:
+            E2 += 2*np.pi
+
+        M1 = E1 - e*sin(E1)
+        M2 = E2 - e*sin(E2)
+
+        t = (M2 - M1)/n
+        return t
+
     def kep_to_cart(self,elements:dict,mu:float)->list:
         """ 
         This function converts kepelerian elements to cartesian vectors for position and velocity
@@ -379,7 +414,7 @@ class Orbit():
             epoch = datetime.datetime.now(datetime.timezone.utc)
 
         if not frame:
-            frame = 'GCF_TOD'
+            frame = 'ECI_TOD'
         
         time = []
         for t in dt:
@@ -388,6 +423,7 @@ class Orbit():
         eph = Ephemeris(time,elements=ele_list,frame=frame,epoch=epoch,r_vec=r_list,v_vec=v_list,propagation_type = propagation_type,dt=dt)
 
         return(eph)
+    
 
     def print_elements(self,ele):
         """ 
@@ -926,3 +962,105 @@ class Orbit():
 
         return {'amin': amin,"emin":emin,"tmin_eminp":tmin_eminp,"tmin_eminm":tmin_eminm,"v0":v0}
 
+    def j2_perturbation(self,e:float,i:float,a:float,J2:float = 1.08263e-3,R:float = 6378, mu:float = 398600)->dict:
+        """ 
+        Calculate the drift rates under J2 perturbations
+
+        Args:
+            e: eccentricity
+            i: inclination (rad)
+            a: sma (km)
+            J2: J2 value (default is for earth)
+            R: Radius of orbiting body in km, (default is for earth)
+            mu: gravitational parameter km^3/s^2 (default is for earth)
+
+        Returns:
+            solution: dict containing
+                Omegad: rate of change of RAAN
+                omegad: rate of change of argp
+                n: mean motion without perturbation
+                nbar: average mean motion
+        """
+
+        # Angular drift rates
+        Omegad = -3/2*np.sqrt(mu)*J2*R**2/((1-e**2)**2*a**(7/2))*np.cos(i)
+        omegad = -3/2*(np.sqrt(mu)*J2*R**2)/((1-e**2)**2*a**(7/2))*(5/2*sin(i)**2 - 2)
+
+        # Mean Motion
+        n = np.sqrt(mu/a**3)
+        nbar =  n *(1+3/2*J2*R**2/(a**2*(1-e**2)**2)*(1-3/2*sin(i)**2)*(1-e**2)**0.5)
+
+        solution = {"Omegad": Omegad,"omegad":omegad,"n":n,"nbar":nbar}
+        return solution
+
+    def lpe_propagation_J2(self,alpha0:dict,dt:list,mu:float,J2:float,R:float,epoch:datetime = datetime.datetime.now(datetime.timezone.utc),frame:str = None)->Ephemeris:
+        """ 
+        This function takes in an initial set of keplerian elements and propagates them under the 
+        Lagrange planetary equations for each delta t in dt. This is all for the J2 perturbation 
+        around a planet of radius R.
+
+        Args:
+            alpha0: dict of initial kep elements [a0,e0,i0,omega0,Omega0,M0,n0]
+            dt: a list of dt values (from epoch)
+            mu: gravitational parameter
+            J2: Oblateness zonal harmonic
+            R: radius of orbiting planet
+            epoch: Integration start time (assumed to be now if not provided)
+
+        Returns: 
+            eph: Propagated ephemeris        
+        """
+
+        # Etracting initial values
+        a0 = alpha0['a0']
+        e0 = alpha0['e0']
+        i0 = alpha0['i0']
+        omega0 = alpha0['omega0']
+        Omega0 = alpha0['Omega0']
+        M0 = alpha0['M0']
+        n0 = alpha0['n0']
+
+        # Finding constant values
+        p = a0*(1-e0**2)
+        abar = a0
+        ebar = e0
+        ibar = i0
+        ibar_deg = i0*180/np.pi
+
+        prop_results = [alpha0]
+        for t in dt:
+            try:
+                i = prop_results[-1]['ibar']
+                a = prop_results[-1]['abar']
+                n = prop_results[-1]['nbar']
+                e = prop_results[-1]['ebar']      
+            except:
+                i = i0
+                a = a0
+                e = e0
+                n = n0 
+
+            # Calculating the new values
+            nbar = n0*(1 + 3/2*J2*R**2/(p**2)*(1-3/2*sin(i)**2)*(1-e**2)**0.5)
+            omegabar = omega0 + 3/2*J2*R**2/p**2*(1-5/2*sin(i)**2)*(1-e**2)**(1/2)*t
+            Omegabar = Omega0 - 3/2*J2*R**2/p**2*nbar*cos(i)*t
+            Mbar = M0 + nbar*t
+            t_utc = epoch + datetime.timedelta(seconds=t)
+            h = np.sqrt(mu*a*(1-e**2))
+            sublist = {'nbar':nbar,'ibar':ibar,'abar':abar,'ebar':ebar,'omegabar':omegabar,'Omegabar':Omegabar,'Mbar':Mbar,'t':t_utc,'dt':dt,'h':h}
+            prop_results.append(sublist)
+
+        propagation_type = 'LAGRANGE_PLANETARY_EQ'
+        
+        if not epoch:
+            epoch = datetime.datetime.now(datetime.timezone.utc)
+
+        if not frame:
+            frame = 'ECI_TOD'
+        
+        time = []
+        for t in dt:
+            time.append(epoch + datetime.timedelta(seconds=t))
+
+        eph = Ephemeris(time,elements=None,frame=frame,epoch=epoch,r_vec=None,v_vec=None,propagation_type = propagation_type,dt=dt,perturbed= prop_results)
+        return eph

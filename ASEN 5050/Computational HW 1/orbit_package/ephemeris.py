@@ -1,6 +1,9 @@
 import numpy as np
 #from orbit_package import orbit
-from orbit_package.math_tools import *
+try:
+    from orbit_package.math_tools import *
+except:
+    from math_tools import *
 import datetime
 
 #orb = orbit()
@@ -8,7 +11,7 @@ class Ephemeris:
     def __init__(self, t: list, r_vec: list = None, v_vec: list = None,
                  elements: dict = None, frame: str = None,
                  epoch: datetime.datetime = None, propagation_type: str = None,
-                 dt: list = None,osculating:list = None):
+                 dt: list = None,osculating:list = None,perturbed:list=None):
 
         if not propagation_type:
             propagation_type = 'NO_PROPAGATION_TYPE'
@@ -22,6 +25,7 @@ class Ephemeris:
                 v_vec[i] if v_vec is not None else None,
                 dt[i] if dt is not None else None,
                 osculating[i] if osculating is not None else None,
+                perturbed[i] if perturbed is not None else None,
                 propagation_type
             ]
             data.append(sub_list)
@@ -221,6 +225,7 @@ class Ephemeris:
         if unit.upper() == 'DEG':
             ele_list = [x*np.pi/180 for x in ele_list]
         return ele_list
+    
     def all_h(self):
         """ 
         This function returns a list of every position vector contained in the ephemeris object
@@ -229,6 +234,22 @@ class Ephemeris:
         for dat in self.data:
             r_list.append(dat[1]['h'])
         return r_list
+    
+    def all_h_osc(self,style:str = 'vec'):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        if style.lower() == 'vec':
+            r_list = []
+            for dat in self.data:
+                r_list.append(dat[5]['h_vec'])
+            return r_list
+        if style.lower() == 'norm':
+            r_list = []
+            for dat in self.data:
+                r_list.append(dat[5]['h'])
+            return r_list
+         
     def all_energy(self):
         """ 
         This function returns a list of every position vector contained in the ephemeris object
@@ -238,7 +259,15 @@ class Ephemeris:
             r_list.append(dat[1]['energy'])
         return r_list
     
-    
+    def all_energy_osc(self):
+        """ 
+        This function returns a list of every position vector contained in the ephemeris object
+        """
+        r_list = []
+        for dat in self.data:
+            r_list.append(dat[5]['energy'])
+        return r_list
+     
     def all_sma_osc(self):
         """ 
         This function returns a list of every dt value contained in the ephemeris object
@@ -289,3 +318,25 @@ class Ephemeris:
         if unit.upper() == 'DEG':
             ele_list = [x*np.pi/180 for x in ele_list]
         return ele_list
+    
+    def all_M_osc(self,unit:str = 'RAD'):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[5]['M'])
+        if unit.upper() == 'DEG':
+            ele_list = [x*np.pi/180 for x in ele_list]
+        return ele_list
+
+    def all_n_osc(self,unit:str = 'RAD'):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[5]['n'])
+        if unit.upper() == 'DEG':
+            ele_list = [x*np.pi/180 for x in ele_list]
+        return ele_list    
