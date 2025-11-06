@@ -90,6 +90,16 @@ class Integrator():
             propagation_type = "NUMERICAL"
             dt = t
             eph = Ephemeris(time,frame=frame,epoch=epoch,r_vec=r_list,v_vec=v_list,propagation_type = propagation_type,dt=dt)
+        if prop_type.upper() == '2BODY_SRP':
+            # Propagation from two_body_dynbodies()
+            time = [datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(seconds=float(t0)) for t0 in t]
+            frame = "ECI_TOD"
+            epoch = datetime.datetime.now(datetime.timezone.utc)
+            r_list = [v[0:3] for v in x.T]
+            v_list = [v[3:6] for v in x.T]
+            propagation_type = "NUMERICAL"
+            dt = t
+            eph = Ephemeris(time,frame=frame,epoch=epoch,r_vec=r_list,v_vec=v_list,propagation_type = propagation_type,dt=dt)
         return eph
 
         
@@ -196,6 +206,44 @@ class ForcingFunction():
         a = -mu/r**3 * r1 + np.transpose(Uj2)
 
         xdot = np.concatenate((v1,a[0]))
+        return xdot
+    
+    def twobody_srp_nodyn(self,t:float,x:list,other:dict)->float:
+        """ 
+        This is a forcing function for the propagation of a satellite's initial state under Solar Radiation Pressure perturbations
+        - The satellite exerts a negligible force on the body it orbits
+        - No perturbations
+        - The coordinate frame is referenced from the large body's center of mass
+        - Distances are point masses but earth 
+        - Force is constant from the sun acting in the positive x direction
+
+        Args: 
+            t: time (unused)
+            x: state vector (x,y,z,xd,yd,zd)
+            other: dict containing {mu, g }
+                g: scaling factor for solar force
+
+        Returns:
+            xdot: derivative as calculated by system dynamics
+        """
+
+        # Unpacking other:
+        mu = other['mu']
+        g = other['g']
+
+        r1 = x[0:3]
+        v1 = x[3:7]
+
+        r = np.linalg.norm(r1)
+
+        x = r1[0]
+        y = r1[1]
+        z = r1[2]
+
+        U = np.array([g,0,0])
+        a = -mu/r**3 * r1 + U
+
+        xdot = np.concatenate((v1,a))
         return xdot
 
 

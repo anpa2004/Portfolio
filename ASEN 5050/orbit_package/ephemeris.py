@@ -294,7 +294,7 @@ class Ephemeris:
         for dat in self.data:
             ele_list.append(dat[5]['inc'])
         if unit.upper() == 'DEG':
-            ele_list = [x*np.pi/180 for x in ele_list]
+            ele_list = [x*180/np.pi for x in ele_list]
         return ele_list
     
     def all_raan_osc(self,unit:str = 'RAD'):
@@ -305,7 +305,7 @@ class Ephemeris:
         for dat in self.data:
             ele_list.append(dat[5]['raan'])
         if unit.upper() == 'DEG':
-            ele_list = [x*np.pi/180 for x in ele_list]
+            ele_list = [x*180/np.pi for x in ele_list]
         return ele_list
     
     def all_argp_osc(self,unit:str = 'RAD'):
@@ -314,9 +314,12 @@ class Ephemeris:
         """
         ele_list = []
         for dat in self.data:
-            ele_list.append(dat[5]['argp'])
+            val = dat[5]['argp']
+            if val>(2*np.pi-1e-3):
+                val = val - 2*np.pi
+            ele_list.append(val)
         if unit.upper() == 'DEG':
-            ele_list = [x*np.pi/180 for x in ele_list]
+            ele_list = [x*180/np.pi for x in ele_list]
         return ele_list
     
     def all_M_osc(self,unit:str = 'RAD'):
@@ -325,9 +328,12 @@ class Ephemeris:
         """
         ele_list = []
         for dat in self.data:
-            ele_list.append(dat[5]['M'])
+            val = dat[5]['M']
+            if val>(2*np.pi-1e-3):
+                val = val - 2*np.pi
+            ele_list.append(val)
         if unit.upper() == 'DEG':
-            ele_list = [x*np.pi/180 for x in ele_list]
+            ele_list = [x*180/np.pi for x in ele_list]
         return ele_list
 
     def all_n_osc(self,unit:str = 'RAD'):
@@ -340,3 +346,14 @@ class Ephemeris:
         if unit.upper() == 'DEG':
             ele_list = [x*np.pi/180 for x in ele_list]
         return ele_list    
+    
+    def all_omegatilde_osc(self,unit:str = 'RAD'):
+        """ 
+        This function returns a list of every dt value contained in the ephemeris object
+        """
+        ele_list = []
+        for dat in self.data:
+            ele_list.append(dat[5]['raan'] + dat[5]['argp'])
+        if unit.upper() == 'DEG':
+            ele_list = [x*np.pi/180 for x in ele_list]
+        return ele_list  

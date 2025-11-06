@@ -58,7 +58,7 @@ class Graph:
         )
         fig.show()
 
-    def plot_eph_pos_vector(self, eph, linestyle: str = 'line', gradient: bool = False, earth: bool = False) -> None:
+    def plot_eph_pos_vector(self, eph, linestyle: str = 'line', gradient: bool = False, earth: bool = False,r_earth:float=6378) -> None:
         """
         Plot in 3D the position vectors for an Ephemeris object using Plotly.
         """
@@ -98,7 +98,7 @@ class Graph:
         if earth:
             u = np.linspace(0, 2 * np.pi, 100)
             v = np.linspace(0, np.pi, 100)
-            r = 6378
+            r = r_earth
 
             xe = r * np.outer(np.cos(u), np.sin(v))
             ye = r * np.outer(np.sin(u), np.sin(v))
@@ -128,7 +128,8 @@ class Graph:
             scene=dict(
                 xaxis_title='x [km]',
                 yaxis_title='y [km]',
-                zaxis_title='z [km]'
+                zaxis_title='z [km]',
+                aspectmode = 'data'
             ),
             title="Propagated Orbit Trajectory" if linestyle == 'line' else "Propagated Orbit Position",
             legend=dict(x=0.02, y=0.98)
@@ -332,7 +333,8 @@ class Graph:
             scene=dict(
                 xaxis_title='x [km]',
                 yaxis_title='y [km]',
-                zaxis_title='z [km]'
+                zaxis_title='z [km]',
+                aspectmode = 'data'
             ),
             title="Propagated Orbit Trajectory" if linestyle == 'line' else "Propagated Orbit Position",
             legend=dict(x=0.02, y=0.98)
@@ -877,7 +879,6 @@ class Graph:
         
         fig.show()
 
-
     def plot_eph_osc_withJ2(self,eph:Ephemeris,averaged:dict,mu:float,deg: str = 'DEG')->None:
         """ 
         This function will take in ephemeris and plot the osculating elements
@@ -890,36 +891,51 @@ class Graph:
             None
         """
 
+        ibar = averaged['ibar']
+        ibar = [i*180/np.pi for i in ibar]
+        Mbar = averaged['Mbar']
+        Mbar = [M for M in Mbar]
+        Omegabar = averaged['Omegabar']
+        Omegabar = [M*180/np.pi + 360 for M in Omegabar]
+        omegabar = averaged['omegabar']
+        omegabar = [M*180/np.pi for M in omegabar]
         if eph.data[0][5] is None:
             print('Using Keplers EQ to fill Osc elements')
             eph = orb.fill_eph_osculating(eph,mu)
         
         fig = make_subplots(rows=4, cols=2,
-                        subplot_titles=("Radius", "Eccentricity", "Velocity", "Inclination","True Anomaly","Right Ascension of Ascending Node","Semi Major Axis","Argument of Periapsis","Angular Momentum", "Energy"))
+                        subplot_titles=("Radius","Argument of Periapsis","Semimajor Axis","Right Ascencsion of the Ascending Node","Eccentricity","Mean Anomaly","Inclination","Mean Motion"))
         fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_r_norm(),name='Distance'),row=1,col=1)
+        # sma subplot (2,1)
         fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_sma_osc(),name='Semimajor Axis'),row=2,col=1)
         fig.add_trace(go.Scatter(x=eph.all_t(),y=averaged['abar'],name='Average SMA'),row=2,col=1)
+        # ecc subplot (3,1)
         fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_ecc_osc(),name='Eccencticity'),row=3,col=1)
         fig.add_trace(go.Scatter(x=eph.all_t(),y=averaged['ebar'],name='Average Eccencticity'),row=3,col=1)
-        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_inc_osc(),name='Inclination'),row=4,col=1)
-        fig.add_trace(go.Scatter(x=eph.all_t(),y=averaged['ibar'],name='Average Inclination'),row=4,col=1)
-        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_argp_osc(),name='Arg of Perigee'),row=1,col=2)
-        fig.add_trace(go.Scatter(x=eph.all_t(),y=averaged['omegabar'],name='Average Argp'),row=1,col=2)
-        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_raan_osc(),name='RAAN'),row=2,col=2)
-        fig.add_trace(go.Scatter(x=eph.all_t(),y=averaged['Omegabar'],name='Average RAAN'),row=2,col=2)
-        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_M_osc(),name='Mean Anomaly'),row=3,col=2)
-        fig.add_trace(go.Scatter(x=eph.all_t(),y=averaged['Mbar'],name='Average Mean Anomaly'),row=3,col=2)
+        #inc subplot (4,1)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_inc_osc('DEG'),name='Inclination'),row=4,col=1)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=ibar,name='Average Inclination'),row=4,col=1)
+        # argp subplot (1,2)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_argp_osc('DEG'),name='Arg of Perigee'),row=1,col=2)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=omegabar,name='Average Argp'),row=1,col=2)
+        # raan subplot (2,2)
+        fig.add_trace(go.Scatter(x=eph.all_t()[1:-1],y=Omegabar[1:-1],name='Average RAAN'),row=2,col=2)
+        fig.add_trace(go.Scatter(x=eph.all_t()[1:-1],y=eph.all_raan_osc('DEG')[1:-1],name='RAAN'),row=2,col=2)
+        # M subplot (3,2)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_M_osc('DEG'),name='Mean Anomaly'),row=3,col=2)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=Mbar,name='Average Mean Anomaly'),row=3,col=2)
+        # n subplot (4,2)
         fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_n_osc(),name='Mean Motion'),row=4,col=2)
         fig.add_trace(go.Scatter(x=eph.all_t(),y=averaged['nbar'],name='Average Mean Motion'),row=4,col=2)
         
-        fig.update_yaxes(title_text="Radius (km)", row=1, col=1)
-        fig.update_yaxes(title_text="Semimajor Axis (km)", row=2, col=1)
-        fig.update_yaxes(title_text="Eccentricity", row=3, col=1)
-        fig.update_yaxes(title_text=f"Inclination ({deg})", row=4, col=1)
-        fig.update_yaxes(title_text=f"Argument of Perigee ({deg})", row=1, col=2)
-        fig.update_yaxes(title_text=f"Right Ascension of Ascending Node ({deg})", row=2, col=2)
-        fig.update_yaxes(title_text=f"Mean Anomaly ({deg})", row=3, col=2)
-        fig.update_yaxes(title_text=f"Mean Motion ({deg}/s)", row=4, col=2)
+        fig.update_yaxes(title_text="R (km)", row=1, col=1)
+        fig.update_yaxes(title_text="SMA (km)", row=2, col=1)
+        fig.update_yaxes(title_text="ECC", row=3, col=1)
+        fig.update_yaxes(title_text=f"INC ({deg})", row=4, col=1)
+        fig.update_yaxes(title_text=f"ARGP ({deg})", row=1, col=2)
+        fig.update_yaxes(title_text=f"RAAN ({deg})", row=2, col=2)
+        fig.update_yaxes(title_text=f"M ({deg})", row=3, col=2)
+        fig.update_yaxes(title_text=f"n ({deg}/s)", row=4, col=2)
 
         fig.update_layout(
             title={
@@ -937,3 +953,100 @@ class Graph:
 
         
         fig.show()
+
+    def plot_data(self, y:list, x:list = None, xlab:str=None, ylab:str = None, title:str = None,mode:str='lines',Name:str=None) -> None:
+        """
+        Plot dt vs val with labels using Plotly
+        """
+        fig = go.Figure()
+        if x is not None:
+            fig.add_trace(go.Scatter(
+                x=x, y=y, mode=mode,name=Name
+            ))
+        else:
+            x = np.linspace(0,len(y),len(y))
+            fig.add_trace(go.Scatter(
+                x=x, y=y, mode=mode,name=Name
+            ))
+
+        fig.update_layout(
+            title=title,
+            xaxis_title=xlab,
+            yaxis_title=ylab,
+            showlegend=True
+        )
+        fig.show()
+
+    def plot_eph_osc_withsrp(self,eph:Ephemeris,averaged:dict,mu:float,deg: str = 'DEG')->None:
+        """ 
+        This function will take in ephemeris and plot the osculating elements
+
+        Args:
+            eph: an ephemeris object to plot
+            mu: gravitational parameter
+
+        Returns:
+            None
+        """
+        abar = averaged['abar']
+        ebar = averaged['ebar']
+        ibar = averaged['ibar']
+        sigmabar = averaged['sigmabar']
+        omegatildebar = averaged['omegatildebar']
+
+        M = eph.all_M_osc()
+        n = eph.all_n_osc()
+        t = eph.all_dt()
+        sigma = []
+        for k in range(len(eph.data)):
+            sigma.append( M[k] - n[k]*t[k])
+        
+        if eph.data[0][5] is None:
+            print('Using Keplers EQ to fill Osc elements')
+            eph = orb.fill_eph_osculating(eph,mu)
+
+        omegatilde = eph.all_omegatilde_osc()
+        omegatilde = [x*180/np.pi for x in omegatilde]
+        
+        fig = make_subplots(rows=3, cols=2,
+                        subplot_titles=("Radius","Eccentricity","Semimajor Axis","Omega Tilda (omega + Omega)", "Inclination","Sigma"))
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_r_norm(),name='Distance'),row=1,col=1)
+        # sma subplot (2,1)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_sma_osc(),name='Semimajor Axis'),row=2,col=1)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=abar,name='Average SMA'),row=2,col=1)
+        # ecc subplot (3,1)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_inc_osc('inc'),name='Inclination'),row=3,col=1)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=ibar,name='Average Inclination'),row=3,col=1)
+        # argp subplot (1,2)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=eph.all_ecc_osc(),name='Eccentricity'),row=1,col=2)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=ebar,name='Average Ecc'),row=1,col=2)
+        # raan subplot (2,2)
+        fig.add_trace(go.Scatter(x=eph.all_t()[1:-1],y=omegatilde,name='Omega tilda'),row=2,col=2)
+        fig.add_trace(go.Scatter(x=eph.all_t()[1:-1],y=omegatildebar,name='Avg Omega Tilda'),row=2,col=2)
+        # M subplot (3,2)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=sigma,name='sigma'),row=3,col=2)
+        fig.add_trace(go.Scatter(x=eph.all_t(),y=sigmabar,name='Average sigma'),row=3,col=2)
+        
+        fig.update_yaxes(title_text="R (km)", row=1, col=1)
+        fig.update_yaxes(title_text="SMA (km)", row=2, col=1)
+        fig.update_yaxes(title_text=f"INC ({deg})", row=3, col=1)
+        fig.update_yaxes(title_text=f"ECC ", row=1, col=2)
+        fig.update_yaxes(title_text=f"OMEGA TILDE ({deg})", row=2, col=2)
+        fig.update_yaxes(title_text=f"SIGMA ({deg})", row=3, col=2)
+
+        fig.update_layout(
+            title={
+            'text': "Ephemeris Osculating Features with Averaged Results",
+            'font': {'size': 24}
+            },
+            title_subtitle_text=f"Epoch: {eph.epoch}, Frame: {eph.frame}, Propagation: {eph.data[0][6]}",
+            title_subtitle_font={'size': 16, 'color': 'gray'},
+            xaxis_title='Time (UTC)',
+            autosize=False,
+            width=1600,  # Set the desired width in pixels
+            height=800, # Set the desired height in pixels
+            showlegend=True
+        )
+
+        
+        fig.show()     

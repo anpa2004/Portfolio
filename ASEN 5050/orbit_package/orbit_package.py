@@ -15,111 +15,134 @@ except:
 
 
 class Orbit():
-    def orbital_elements(self,r_vec:list,v_vec:list,mu:float)->dict:
-        """ 
-        This function takes in position r, velocity v and gravitational parameter mu and reterns keplerian elements
+    def orbital_elements(self, r_vec: list, v_vec: list, mu: float) -> dict:
+        r_vec = np.array(r_vec, dtype=float)
+        v_vec = np.array(v_vec, dtype=float)
 
-        Args:
-            r_vec: a 3 element vector for position in inertial coordinate frame
-            v_vec: a 3 element vector for velocity in inertial coordinate frame
-            mu: gravitational parameter in units matching r and v
+        # Principals
+        K = np.array([0.0, 0.0, 1.0])
+        X = np.array([1.0, 0.0, 0.0])
 
-        Returns:
-            ele: a dict containing all the orbital elements at the time of the position and velocity vectors
-        """
-
-        # Principle directions
-        x_vec = np.array([1,0,0])
-        y_vec = np.array([0,1,0])
-        z_vec = np.array([0,0,1])
-
-        # Scalar quantities
         r = np.linalg.norm(r_vec)
         v = np.linalg.norm(v_vec)
 
-        # Calculating angular momentum
-        h_vec = np.cross(r_vec,v_vec)
+        # Angular momentum
+        h_vec = np.cross(r_vec, v_vec)
         h = np.linalg.norm(h_vec)
-        h_hat = h_vec/h
+        if h == 0:
+            raise ValueError("Zero angular momentum vector (r and v collinear)")
 
-        # Finding inclination
-        i = np.arccos(np.dot(h_hat,z_vec))
+        # inclination
+        inc = np.arccos(np.clip(h_vec[2] / h, -1.0, 1.0))
 
-        # Finding RAAN
-        if i>0 and i<np.pi:
-            N_vec = np.cross(z_vec,h_vec)
-            # RAAN = np.arccos(np.dot(N_vec/np.linalg.norm(N_vec),x_vec))
-            if np.linalg.norm(N_vec) < 1e-10:
-                RAAN = 0
-            else:
-                RAAN = np.arccos(np.dot(N_vec/np.linalg.norm(N_vec), x_vec))
-                if N_vec[1] < 0:
-                    RAAN = 2*np.pi - RAAN
-        else:
-            RAAN = 0
-            N_vec = [1,0,0]       
+        # node vector (pointing toward ascending node)
+        N_vec = np.cross(K, h_vec)
+        N = np.linalg.norm(N_vec)
 
-        # Finding eccentricity
-        e_vec = np.cross(v_vec,h_vec)/mu - r_vec/r
+        # eccentricity vector (robust formula)
+        e_vec = (np.cross(v_vec, h_vec) / mu) - (r_vec / r)
         e = np.linalg.norm(e_vec)
 
-        # finding radial velocity
+        # RAAN using atan2 for correct quadrant (if N ~ 0 handle special case)
+        if N > 1e-12:
+            RAAN = np.arctan2(N_vec[1], N_vec[0]) % (2 * np.pi)
+        else:
+            RAAN = 0.0
+            # keep N_vec as a valid array for downstream
+            N_vec = np.array([1.0, 0.0, 0.0])
+            N = 1.0
+
         vr = np.dot(v_vec,r_vec/r)
 
-        # Finding arg periapsis
-        if e>1e-8:
-            omega = np.arccos(np.dot(e_vec,N_vec)/(e*np.linalg.norm(N_vec)))
-            # Finding true anomaly
-            nu = np.arccos(np.dot(e_vec,r_vec)/(e*r))
-            if vr<0:
-                nu = 2*np.pi - nu
+        # if e > 1e-8:
+        #     N_norm = np.linalg.norm(N_vec)
+        #     if N_norm < 1e-10:
+        #         omega = 0.0
+        #     else:
+        #         omega = np.arccos(np.dot(N_vec, e_vec) / (N_norm * e))
+        #         # Quadrant correction
+        #         if e_vec[2] < 0:
+        #             omega = 2 * np.pi - omega
+        # else:
+        #     omega = 0.0
+
+        if e > 1e-8:
+            N_norm = np.linalg.norm(N_vec)
+            if N_norm < 1e-10:
+                omega = 0.0
+            else:
+                omega = np.arccos(np.dot(N_vec, e_vec) / (N_norm * e))
+                # Proper quadrant correction
+                if np.dot(np.cross(N_vec, e_vec), h_vec) < 0:
+                    omega = 2*np.pi - omega
         else:
-            omega = 0
+            omega = 0.0
+
+        if e > 1e-8:
+            nu = np.arccos(np.dot(e_vec, r_vec) / (e * r))
+            if vr < 0:
+                nu = 2 * np.pi - nu
+        else:
+            # circular orbit case
             nu = np.arccos(np.dot(N_vec, r_vec) / (np.linalg.norm(N_vec) * r))
             if r_vec[2] < 0:
-                nu = 2*np.pi - nu
+                nu = 2 * np.pi - nu
 
-        # quadrant correction
-        if e_vec[2] <0:
-            omega = 2*np.pi - omega        
+        # semi-major axis via energy or h-based formula (elliptic)
+        energy = v**2 / 2.0 - mu / r
+        if abs(energy) > 1e-12:
+            sma = -mu / (2.0 * energy)
+        else:
+            sma = np.inf
 
-        # Finding sma
-        sma = h**2/(mu*(1-e**2))
+        # Alternatively h^2/(mu*(1-e^2)) for conic sections (works for e != 1)
+        if e != 1.0:
+            sma_check = h**2 / (mu * (1.0 - e**2))
+            # keep sma_check only if not inconsistent with energy calculation for hyperbolic cases
+            sma = sma_check if np.isfinite(sma_check) else sma
 
-        # Finding period, mean motion
-        T = 2*np.pi*np.sqrt(sma**3/mu)
-        n = 2*np.pi/T
+        # Period and mean motion for bounded orbits
+        if e < 1.0:
+            T = 2.0 * np.pi * np.sqrt(abs(sma**3) / mu)
+            n = 2.0 * np.pi / T
+        else:
+            T = np.inf
+            n = 0.0
 
-        if e<1:
-            # Eccentric Anomaly
-            E = 2 * np.arctan(np.sqrt((1-e)/(1+e)) * np.tan(nu/2))
-
-            # Eccentric Anomaly Quadrant Correction
-            if nu > np.pi:
-                E = 2*np.pi - E
-
-            # Mean Anomaly
-            M = E - e*np.sin(E)
-
-            # Hyperbolic anomaly
-            H = 0
-
+        # Eccentric anomaly (elliptic) and mean anomaly
+        if e < 1.0:
+            # safe compute E from true anomaly
+            E = 2.0 * np.arctan2(np.sqrt(1.0 - e) * np.sin(nu / 2.0),
+                                np.sqrt(1.0 + e) * np.cos(nu / 2.0))
+            E = E % (2.0 * np.pi)
+            M = E - e * np.sin(E)
+            H = 0.0
         else:
             E = None
-            H = 2*np.arctanh(np.sqrt((e-1)/(e+1)*np.tan(nu/2)))
-            M = -H + e*np.sinh(H)
+            # hyperbolic anomaly H from true anomaly nu
+            H = 2.0 * np.arctanh(np.sqrt((e - 1.0) / (e + 1.0)) * np.tan(nu / 2.0)) if e > 1.0 else 0.0
+            M = -H + e * np.sinh(H) if e > 1.0 else 0.0
 
-        # true anomaly equals mean anomaly in circular orbit
-        if e == 0:
-            nu = M
+        # orbit direction
+        orbit_type = 'prograde' if inc < (np.pi / 2.0) else 'retrograde'
 
-        if np.abs(i) < np.pi:
-            orbit_type = 'prograde'
-        else: 
-            orbit_type = 'retrograde'
-        energy = -mu/r + v**2/2
-
-        ele = {"inc": float(i),"raan":float(RAAN),"ecc":float(e),"argp":float(omega),"nu":float(nu),"T":float(T),"sma":float(sma),"E":float(E),"M":float(M),"H":float(H),"n":float(n),"orbit_type":orbit_type, 'h':h,'h_vec':h_vec,'energy':energy}
+        ele = {
+            "inc": float(inc),
+            "raan": float(RAAN),
+            "ecc": float(e),
+            "argp": float(omega),
+            "nu": float(nu),
+            "T": float(T),
+            "sma": float(sma),
+            "E": float(E) if E is not None else None,
+            "M": float(M),
+            "H": float(H),
+            "n": float(n),
+            "orbit_type": orbit_type,
+            "h": float(h),
+            "h_vec": h_vec,
+            "energy": float(energy)
+        }
         return ele
 
     def propagated_elements(self, elements: dict, t: float) -> dict:
@@ -342,29 +365,34 @@ class Orbit():
         a = elements['sma']
         e = elements['ecc']
         E = elements['E']
-        nu = elements['nu']
-        w = elements['argp']
+        omega = elements['argp']
         i = elements['inc']
-        O = elements['raan']
+        Omega = elements['raan']
 
-        # Finding distance to central body
-        r = a*(1-e*np.cos(E)) # The units of a will dictate the units of r_vec,v_Vec
+        # unit basis
+        xhat = np.array([1.0,0.0,0.0])
+        yhat = np.array([0.0,1.0,0.0])
+        zhat = np.array([0.0,0.0,1.0])
 
-        # Finding position in orbital frame (z axis is h_vec)
-        o = r*np.array([np.cos(nu),np.sin(nu),0])
-        od = np.sqrt(a*mu)/r*np.array([-np.sin(E),np.sqrt(1-e**2)*np.cos(E),0])
-    
-        # Rotating the vectors to their proper frame
-        r_vec = []
-        v_vec = []
+        # --- rotation to get ehat and ehat_perp (perifocal axes expressed in inertial frame) ---
+        ehat = (np.cos(omega)*np.cos(Omega) - np.cos(i)*np.sin(omega)*np.sin(Omega))*xhat \
+            + (np.cos(omega)*np.sin(Omega) + np.cos(i)*np.sin(omega)*np.cos(Omega))*yhat \
+            + (np.sin(omega)*np.sin(i))*zhat
 
-        r_vec.append(o[0]*(cos(w)*cos(O) - sin(w)*cos(i)*sin(O)) - o[1]*(sin(w)*cos(O) + cos(w)*cos(i)*sin(O)))
-        r_vec.append(o[0]*(cos(w)*sin(O) + sin(w)*cos(i)*cos(O)) + o[1]*(cos(w)*cos(i)*cos(O) - sin(w)*sin(O)))
-        r_vec.append(o[0]*(sin(w)*sin(i)) + o[1]*(cos(w)*sin(i)))
+        ehat_perp = (-(np.sin(omega)*np.cos(Omega) + np.cos(i)*np.cos(omega)*np.sin(Omega)))*xhat \
+                + (-(np.sin(omega)*np.sin(Omega) - np.cos(i)*np.cos(omega)*np.cos(Omega)))*yhat \
+                + (np.cos(omega)*np.sin(i))*zhat
 
-        v_vec.append(od[0]*(cos(w)*cos(O) - sin(w)*cos(i)*sin(O)) - od[1]*(sin(w)*cos(O) + cos(w)*cos(i)*sin(O)))
-        v_vec.append(od[0]*(cos(w)*sin(O) + sin(w)*cos(i)*cos(O)) + od[1]*(cos(w)*cos(i)*cos(O) - sin(w)*sin(O)))
-        v_vec.append(od[0]*(sin(w)*sin(i)) + od[1]*(cos(w)*sin(i)))
+        # --- position and velocity in inertial from E (corrected formulas) ---
+        # scalar orbital radius (exact formula)
+        r_norm = a * (1 - e * np.cos(E))
+
+        # position: a*(cosE - e) * ehat  +  a*sqrt(1-e^2)*sinE * ehat_perp
+        r_vec = a * (np.cos(E) - e) * ehat + a * np.sqrt(1 - e**2) * np.sin(E) * ehat_perp
+
+        # velocity (perifocal -> inertial): (sqrt(mu*a)/r) * (-sinE * ehat + sqrt(1-e^2)*cosE * ehat_perp)
+        v_prefactor = np.sqrt(mu * a) / r_norm
+        v_vec = v_prefactor * ( -np.sin(E) * ehat + np.sqrt(1 - e**2) * np.cos(E) * ehat_perp )
 
         return r_vec,v_vec
 
@@ -424,7 +452,6 @@ class Orbit():
 
         return(eph)
     
-
     def print_elements(self,ele):
         """ 
         This function is a way of quickly reading out elements after calculating them
