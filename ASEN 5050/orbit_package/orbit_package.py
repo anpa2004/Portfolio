@@ -396,6 +396,48 @@ class Orbit():
 
         return r_vec,v_vec
 
+    def tbp_to_cart(self,eph:Ephemeris,mu:float)->Ephemeris:
+        """  
+        This function takes in the results from CR3BP propagation and 
+        converts to inertial cartesian space in order to find keplerian elements
+        THIS ONLY WORKS FOR 2D MOTION (z=0)
+
+        Args:
+            eph: Ephemeris of popagated results
+            mu: gravitational parameter
+        """
+
+        x_list = eph.all_x()
+        y_list = eph.all_y()
+        xp_list = eph.all_xd()
+        yp_list = eph.all_yd()
+        t_list = eph.all_dt()
+        r_list = eph.all_r()
+        v_list = eph.all_v()
+
+        for i in range(len(x_list)):
+            T = np.array([[np.cos(t_list[i]),-np.sin(t_list[i])],[np.sin(t_list[i]),np.cos(t_list[i])]])
+           
+            # Rotation of position coordinates
+            xy_vec = np.array([x_list[i],y_list[i]])
+            xy1_list = T@xy_vec
+            r_list[i][0] = xy1_list[0]
+            r_list[i][1] = xy1_list[1]
+
+            # Rotation of velocity values
+            xyp_vec = np.array([xp_list[i]-y_list[i],yp_list[i]+x_list[i]])
+            xyp1_list = T@xyp_vec
+            v_list[i][0] = xyp1_list[0]
+            v_list[i][1] = xyp1_list[1]
+        
+        # Rebuilding Ephemeris object
+        t = eph.all_t()
+        dt = eph.all_dt()
+        frame = eph.frame
+        epoch = eph.epoch
+        eph_out = Ephemeris(t=t,r_vec=r_list,v_vec=v_list,frame=frame,epoch=epoch,dt=dt,propagation_type='NUMERICAL')
+        return eph_out
+        
     def propagate_ic(self,r_vec:list,v_vec:list,mu:float,t:float)->list:
         """  
         This function takes in an initial condition (r,v) and propagates for an orbit about an object with
@@ -1091,3 +1133,4 @@ class Orbit():
 
         eph = Ephemeris(time,elements=None,frame=frame,epoch=epoch,r_vec=None,v_vec=None,propagation_type = propagation_type,dt=dt,perturbed= prop_results)
         return eph
+    

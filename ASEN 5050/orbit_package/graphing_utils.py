@@ -954,7 +954,7 @@ class Graph:
         
         fig.show()
 
-    def plot_data(self, y:list, x:list = None, xlab:str=None, ylab:str = None, title:str = None,mode:str='lines',Name:str=None) -> None:
+    def plot_data(self, y:list, x:list = None, xlab:str=None, ylab:str = None, title:str = None,mode:str='lines',Name:str=None,subtitle:str=None) -> None:
         """
         Plot dt vs val with labels using Plotly
         """
@@ -969,12 +969,27 @@ class Graph:
                 x=x, y=y, mode=mode,name=Name
             ))
 
-        fig.update_layout(
-            title=title,
-            xaxis_title=xlab,
-            yaxis_title=ylab,
-            showlegend=True
-        )
+        if subtitle is None:
+            fig.update_layout(
+                title=dict(
+                    text=title   # shows only title
+                ),
+                xaxis_title=xlab,
+                yaxis_title=ylab,
+                showlegend=True
+            )
+
+        else:
+            fig.update_layout(
+                title=dict(
+                    # subtitle appears on the second line
+                    text=title + f"<br><sup>{subtitle}</sup>"
+                ),
+                xaxis_title=xlab,
+                yaxis_title=ylab,
+                showlegend=True
+            )
+        
         fig.show()
 
     def plot_eph_osc_withsrp(self,eph:Ephemeris,averaged:dict,mu:float,deg: str = 'DEG')->None:
@@ -1049,4 +1064,112 @@ class Graph:
         )
 
         
-        fig.show()     
+        fig.show()    
+
+    def plot_eph_jacobi(self,eph:Ephemeris,jfunc,mu)->None:
+        """  
+        This funciotn takes in an epehemris object and calculates and plots the value of the jacobi integral. 
+        """ 
+        J = eph.all_jacobi(jfunc,mu)
+        t = eph.all_t()
+        fig = go.Figure()
+    
+        fig.add_trace(go.Scatter(
+            x=t, y=J, mode='lines',name='Jacobi Value'
+            ))
+        
+        delta = 0.01
+        fig.update_yaxes(range=[J[-1]-delta, J[-1]+delta])
+        fig.update_layout(
+            title='Jacobi Integral Over Time',
+            xaxis_title='Time (UTC)',
+            yaxis_title='Jacobi Integral Value',
+            showlegend=True
+        )
+        fig.show()
+
+    def plot_eph_pos_vector_2D(self,eph:Ephemeris,points:list=None,point_names:list=None,gradient:bool=False)->None:
+        """  
+        This does the same thing as plot_eph_pos_vector but is optomized for 2D graphs
+        """ 
+        fig = go.Figure() 
+        
+
+        if gradient:
+            t_list = eph.all_dt()
+            t_list = [float(t) for t in t_list]
+            fig.add_trace(go.Scatter(
+                x=eph.all_x(), y=eph.all_y(), mode='lines',name=''
+                ))
+            fig.add_trace(go.Scatter(
+                    x = eph.all_x(),
+                    y = eph.all_y(),
+                    mode='markers',
+                    name = 'Position',
+                    marker=dict(
+                        size=6,
+                        color=t_list, #set color equal to a variable
+                        colorscale='Viridis', # one of plotly colorscales
+                        showscale=True,
+                        colorbar_title="Time")))
+            
+        else:
+            fig.add_trace(go.Scatter(
+                x=eph.all_x(), y=eph.all_y(), mode='lines',name='Position'
+                ))
+        
+        if points:
+            for i in range(len(points)):
+                point = points[i]
+                point_name = point_names[i]
+                fig.add_trace(go.Scatter(
+                    x=[point[0]], y=[point[1]], mode='markers',name=point_name
+            ))
+        fig.update_layout(
+            title='Spacecraft Position',
+            xaxis_title='x',
+            yaxis_title='y',
+            showlegend=False
+        )
+        fig.show()
+
+    def plot_data_subplot3(self, y1:list,y2:list,y3:list, x:list = None, xlab:str=None, ylab:list = None, title:str = None,mode:str='lines',Name:list=None,subtitle:str=None) -> None:
+        """
+        Plot dt vs val with labels using Plotly
+        """
+        # Create figure with 3 rows
+        fig = make_subplots(rows=3, cols=1, shared_xaxes=False)
+
+        # Create independent x if not provided
+        if x is None:
+            x = np.linspace(0, len(y1), len(y1))
+
+        # Add traces
+        fig.add_trace(go.Scatter(x=x, y=y1, mode=mode, name=Name[0]), row=1, col=1)
+        fig.add_trace(go.Scatter(x=x, y=y2, mode=mode, name=Name[1]), row=2, col=1)
+        fig.add_trace(go.Scatter(x=x, y=y3, mode=mode, name=Name[2]), row=3, col=1)
+
+        # Handle title + subtitle
+        if subtitle is None:
+            title_text = title
+        else:
+            title_text = title + f"<br><sup>{subtitle}</sup>"
+
+        # Update layout once
+        fig.update_layout(
+            title=dict(text=title_text),
+            showlegend=True
+        )
+
+        # Apply axis titles to each subplot properly
+        # Y label applies to each row
+        if ylab is not None:
+            fig.update_yaxes(title_text=ylab[0], row=1, col=1)
+            fig.update_yaxes(title_text=ylab[1], row=2, col=1)
+            fig.update_yaxes(title_text=ylab[2], row=3, col=1)
+
+        # X label applies only to bottom row
+        if xlab is not None:
+            fig.update_xaxes(title_text=xlab, row=3, col=1)
+
+        fig.show()

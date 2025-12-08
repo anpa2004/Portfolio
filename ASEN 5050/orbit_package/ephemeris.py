@@ -34,6 +34,12 @@ class Ephemeris:
         self.epoch = epoch
         self.frame = frame
 
+    def length(self):
+        """  
+        This function returns the length of the ephemeris
+        """
+        return(len(self.data))
+
     def all_r(self):
         """ 
         This function returns a list of every position vector contained in the ephemeris object
@@ -357,3 +363,23 @@ class Ephemeris:
         if unit.upper() == 'DEG':
             ele_list = [x*np.pi/180 for x in ele_list]
         return ele_list  
+    
+    def all_jacobi(self,jfunc,mu)->list:
+        """   
+        This function calculates the value of the Jacobi integral at each time for the integral
+        """
+        x = self.all_x()
+        y = self.all_y()
+        vx = self.all_xd()
+        vy = self.all_yd()
+
+        J = []
+        for i in range(self.length()):
+            J.append(jfunc(x[i],y[i],vx[i],vy[i],mu))
+        return J
+
+    def all_data(self):
+        """" 
+        This function returns all of the data lists in the ephemeris object
+        """
+        return self.data

@@ -2,10 +2,13 @@ import numpy as np
 from scipy.integrate import solve_ivp
 try:
     from orbit_package.ephemeris import Ephemeris
+    from orbit_package.threebp_objects import Cr3bp
 except:
     from ephemeris import Ephemeris
+    from threebp_objects import Cr3bp
 import datetime
 
+cr3bp = Cr3bp()
 
 class Integrator():
     """ 
@@ -101,6 +104,16 @@ class Integrator():
             dt = t
             eph = Ephemeris(time,frame=frame,epoch=epoch,r_vec=r_list,v_vec=v_list,propagation_type = propagation_type,dt=dt)
         if prop_type.upper() == '2BODY_SRPJ2':
+            # Propagation from two_body_dynbodies()
+            time = [datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(seconds=float(t0)) for t0 in t]
+            frame = "ECI_TOD"
+            epoch = datetime.datetime.now(datetime.timezone.utc)
+            r_list = [v[0:3] for v in x.T]
+            v_list = [v[3:6] for v in x.T]
+            propagation_type = "NUMERICAL"
+            dt = t
+            eph = Ephemeris(time,frame=frame,epoch=epoch,r_vec=r_list,v_vec=v_list,propagation_type = propagation_type,dt=dt)
+        if prop_type.upper() == 'CR3BP_NODYN':
             # Propagation from two_body_dynbodies()
             time = [datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(seconds=float(t0)) for t0 in t]
             frame = "ECI_TOD"
@@ -296,7 +309,44 @@ class ForcingFunction():
         xdot = np.concatenate((v1,a))
         return xdot
         
+    def cr3bp_nodyn(self,t:float,X:list,other:dict,c_object:object=cr3bp)->list:
+        """" 
+        This function calculates the rate of change of the position of 
+        an object subject to the circular restricted three body problem. 
+        This assumes planar motion and all of the built in assumptions for the standard
+        CR3BP. 
 
+        Args:
+            t: Time variable
+            X: State vector [r1,v1]
+            other: 
+            c_object: This function requires a functin to calculate 
+                Vx,Vy,Vz,J which is contained. Always leave this input blank
+        returns: 
+            xd: [v1,a1]
+        """
+        x = X[0]
+        y = X[1]
+        z = X[2]
+        vx = X[3]
+        vy = X[4]
+        vz= X[5]
+        mu = other['mu']
+        
+        # Using the cr3bp object to calculate the partials
+        pVpx = cr3bp.pVpx(x,y,z,mu)
+        pVpy = cr3bp.pVpy(x,y,z,mu)
+
+        ax = 2*vy + pVpx
+        ay = -2*vx + pVpy
+        az = 0
+        Xd = [vx,vy,vz,ax,ay,az]
+        return Xd
+
+
+        
+
+        
 
 
         
