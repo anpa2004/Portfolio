@@ -385,14 +385,68 @@ class Attitude_class():
         C = np.eye(3) + (8*np.linalg.matrix_power(lin.tilde(sigma),2)-4*(1-s**2)*lin.tilde(sigma))/(1+s**2)**2
         return C
     
-    def dcm_to_mrp(self,C:list)->list:
+    def dcm_to_mrp(self,C: list) -> list:
         """
-        Return an mrp from a dcm
+        Convert a DCM to an MRP, handling the zeta=0 singularity
+        by switching to the shadow MRP when trace(C) + 1 ≈ 0.
         """
-        zeta = np.sqrt(np.linalg.trace(C) + 1)
-        sigma_tilde = (np.transpose(C) - C)/(zeta*(zeta+2))
-        
+        zeta = np.sqrt(max(0.0, np.trace(C) + 1))  # clamp for numerical safety
+
+        if zeta < 1e-10:
+            # Singular case: rotation angle ~180 deg use Shephard's method for a quaternion and then convert to MRP
+            beta = self.dcm_to_quaternion_shepperd(C)        
+            b0, b1, b2, b3 = beta
+
+            # Use shadow set: sigma_shadow = -beta_vec / (1 + b0)
+            denom = 1.0 + b0
+            if abs(denom) < 1e-10:
+                denom = 1.0 - b0  # use other half
+                sigma = np.array([b1, b2, b3]) / denom
+            else:
+                sigma = -np.array([b1, b2, b3]) / denom
+
+            return sigma.tolist()
+
+        # Normal case
+        sigma_tilde = (C.T - C) / (zeta * (zeta + 2))
         return lin.un_tilde(sigma_tilde)
+
+
+    def dcm_to_quaternion_shepperd(self,C):
+        """
+        Shepperd's method fkr quaternion calculation
+        """
+        candidates = [
+            1 + C[0,0] + C[1,1] + C[2,2],   # 4*b0^2
+            1 + C[0,0] - C[1,1] - C[2,2],   # 4*b1^2
+            1 - C[0,0] + C[1,1] - C[2,2],   # 4*b2^2
+            1 - C[0,0] - C[1,1] + C[2,2],   # 4*b3^2
+        ]
+        i = int(np.argmax(candidates))       # largest value = most numerical stability
+        val = np.sqrt(max(0.0, candidates[i])) / 2.0
+
+        if i == 0:
+            b0 = val
+            b1 = (C[1,2] - C[2,1]) / (4*b0)
+            b2 = (C[2,0] - C[0,2]) / (4*b0)
+            b3 = (C[0,1] - C[1,0]) / (4*b0)
+        elif i == 1:
+            b1 = val
+            b0 = (C[1,2] - C[2,1]) / (4*b1)
+            b2 = (C[0,1] + C[1,0]) / (4*b1)
+            b3 = (C[2,0] + C[0,2]) / (4*b1)
+        elif i == 2:
+            b2 = val
+            b0 = (C[2,0] - C[0,2]) / (4*b2)
+            b1 = (C[0,1] + C[1,0]) / (4*b2)
+            b3 = (C[1,2] + C[2,1]) / (4*b2)
+        else:
+            b3 = val
+            b0 = (C[0,1] - C[1,0]) / (4*b3)
+            b1 = (C[2,0] + C[0,2]) / (4*b3)
+            b2 = (C[1,2] + C[2,1]) / (4*b3)
+
+        return np.array([b0, b1, b2, b3])
     
     def invert_mrp(self,sigma:list)->list:
         """  
