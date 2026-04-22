@@ -388,7 +388,7 @@ class Attitude_class():
     def dcm_to_mrp(self,C: list) -> list:
         """
         Convert a DCM to an MRP, handling the zeta=0 singularity
-        by switching to the shadow MRP when trace(C) + 1 ≈ 0.
+        by switching to the shadow MRP when trace(C) + 1 = 0.
         """
         zeta = np.sqrt(max(0.0, np.trace(C) + 1))  # clamp for numerical safety
 

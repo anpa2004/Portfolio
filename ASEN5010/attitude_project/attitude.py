@@ -83,7 +83,7 @@ class Attitude():
             print(f'    sigma_br = {sigma_br}')
             print(f'    b_omega_br = {b_omega_br}')
 
-        return {'BR':BR,'sigma_br':sigma_br,'b_omega_br':b_omega_br}
+        return {'BR':BR,'sigma_br':sigma_br,'b_omega_br':b_omega_br,'sigma_bn':sigma_bn,'b_omega_rn':b_omega_rn}
     
     def rk4_f(self,X:list,t:float,u:list):
         """ 
@@ -114,9 +114,9 @@ class Attitude():
                 if t >= event['t_start']:
                     return self.u_pd(t, event['ref'], X, event['K'], event['P'])
                 break
-        return np.zeros(3)
+        return np.zeros(3),np.zeros(3)
 
-    def attitude_propagation(self,X0:list[float],tspan:list[float],dt:float=1)->dict[float]:
+    def attitude_propagation(self,X0:list[float],tspan:list[float],dt:float=1,u_irregular=None)->dict[float]:
         """ 
         Propagate the attitude forward given an initial condition and time parameters
         tracking the angular velocity using known system dynamics
@@ -142,6 +142,7 @@ class Attitude():
         # Preallocation 
         X = np.zeros((N+1,6),dtype=float)
         sigma = np.zeros((N+1,3),dtype=float)
+        sigma_error = np.zeros((N+1,3),dtype=float)
         omega = np.zeros((N+1,3),dtype=float)
         u_list = np.zeros((N+1,3),dtype=float)
         X[0] = X0
@@ -158,23 +159,20 @@ class Attitude():
         for index,t in enumerate(t_vec[0:-1],0):
             
             # Finding control vector as function of time and position
-            u = self.scheduled_controller(t,X[index])
+            if u_irregular is not None:
+                u = u_irregular(X,t)
+                error = np.zeros(3)
+            else:
+                u,error = self.scheduled_controller(t,X[index])
             if np.linalg.norm(u) > 1e3:
                 print(f"Large control at t={t}: |u|={np.linalg.norm(u)}")
             u_list[index + 1] = u
 
             # Performing RK4
-            u1 = self.scheduled_controller(t, X[index])
-            k1 = dt*self.rk4_f(X[index], t, u1)
-
-            u2 = self.scheduled_controller(t + dt/2, X[index] + k1/2)
-            k2 = dt*self.rk4_f(X[index] + k1/2, t + dt/2, u2)
-
-            u3 = self.scheduled_controller(t + dt/2, X[index] + k2/2)
-            k3 = dt*self.rk4_f(X[index] + k2/2, t + dt/2, u3)
-
-            u4 = self.scheduled_controller(t + dt, X[index] + k3)
-            k4 = dt*self.rk4_f(X[index] + k3, t + dt, u4)
+            k1 = dt*self.rk4_f(X[index], t, u)
+            k2 = dt*self.rk4_f(X[index] + k1/2, t + dt/2, u)
+            k3 = dt*self.rk4_f(X[index] + k2/2, t + dt/2, u)
+            k4 = dt*self.rk4_f(X[index] + k3, t + dt, u)
             X[index + 1] = X[index] + 1/6*(k1 + 2*k2 + 2*k3 + k4)
 
             # Shadow set MRP
@@ -189,6 +187,7 @@ class Attitude():
             omega[index + 1] = X[index + 1][3:6]
             H[index + 1] = I @ omega_n1
             T[index + 1] = 0.5*omega_n1.T@I@omega_n1
+            sigma_error[index + 1] = error
 
         # Extra helpful parameters
         H_norm = [np.linalg.norm(h) for h in H]
@@ -203,7 +202,8 @@ class Attitude():
             'T': T,
             'H': H,
             'H_norm':H_norm,
-            'BN':BN
+            'BN':BN,
+            'sigma_error':sigma_error
         }
         
     def u_pd(self,t,ref,X,K,P):
@@ -220,14 +220,10 @@ class Attitude():
         Returns:
             u: Feedback control vector
         """
-
-        sigma_bn = X[0:3]
-        omega_bn = X[3:6]
-
         errors = self.tracking_error(t,X,ref)
 
         u = -K*errors['sigma_br'] - P*errors['b_omega_br']
-        return u
+        return u,errors['sigma_br']
     
     def rk_integrator(self,X0,t0,tf,u,dt=1):
         """ 
@@ -248,6 +244,7 @@ class Attitude():
         X = np.zeros((N+1,6),dtype=float)
         sigma = np.zeros((N+1,3),dtype=float)
         omega = np.zeros((N+1,3),dtype=float)
+        sigma_error = np.zeros((N+1,3),dtype=float)
         u_list = np.zeros((N+1,3),dtype=float)
         X[0] = X0
         sigma[0] = sigma0_bn
